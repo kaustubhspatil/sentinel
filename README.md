@@ -30,7 +30,7 @@ the Results section stays empty rather than aspirational.
 | Version-aware CVE matching (Ubuntu USN) | working |
 | MCP tool server (7 tools) | working |
 | Durable remediation workflow (Temporal) | working |
-| Anomaly detection | not started |
+| Behavioural anomaly detection (5 detectors) | working |
 | Evaluation harness | not started |
 
 Currently loaded, from live feeds:
@@ -115,6 +115,35 @@ The asymmetry is real and not a modelling artefact: the Azure marketplace image 
 against an older package set than the GCP one, so an identically-configured host carries
 five times the exposure depending only on where it was provisioned. That is exactly the
 kind of finding an estate-wide graph surfaces and a per-host check does not.
+
+### Agent behavioural detection
+
+Five detectors over agent tool-call traces, fitted on benign behaviour, thresholds set on
+a calibration split that never touches the test split. 4,000 benign runs, 200 labelled
+anomalous across five scenarios.
+
+| Detector | Precision | Recall | FP on 800 benign |
+|---|---|---|---|
+| volume | 0.976 | 0.200 | 1 |
+| sequence | 0.952 | 0.600 | 6 |
+| scope | 1.000 | 0.200 | 0 |
+| novel_tool | 1.000 | 0.200 | 0 |
+| rate | 1.000 | 0.200 | 0 |
+| **union** | — | **1.000** | **7 (0.88%)** |
+
+Per-detector recall near 0.2 is expected: each targets one of five failure families, so
+owning one family completely *is* 0.2 overall. The suite is the unit of analysis.
+
+**Union recall of 1.000 is a ceiling, not a performance claim** — the anomalies are
+generated, so they are separable by construction. The honest reading is "no scenario is
+invisible to the suite", which would have exposed a blind spot had one existed, and
+nothing more.
+
+Two corrections during this work are more informative than the final numbers: the scope
+detector initially caught 1 of 25 escalations because it tested agent *familiarity* with a
+zone rather than scope consistency within a run, and the suite's false-positive rate was
+5.8% against a "1%" budget because five detectors at 1% each union to ~5%. Both are
+written up in [`docs/detection.md`](docs/detection.md).
 
 _Still to be measured:_ retrieval ablation (vector / graph / hybrid), multi-hop answer
 accuracy against a naive-RAG baseline, detector precision–recall on labelled anomalies,
