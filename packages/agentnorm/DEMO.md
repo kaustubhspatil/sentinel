@@ -8,7 +8,7 @@ the one to use in a live conversation — it cannot fail on someone else's wifi.
 ## 1. Detection and evidence, 30 seconds, no infrastructure
 
 ```bash
-pip install -e .
+pip install agentnorm
 python examples/quickstart.py
 ```
 
