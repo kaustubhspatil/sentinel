@@ -46,6 +46,18 @@ class Settings(BaseSettings):
     gcp_region: str = "northamerica-northeast2"
     ollama_host: str = "http://localhost:11434"
 
+    # Graph
+    neo4j_uri: str = "bolt://localhost:7687"
+    neo4j_user: str = "neo4j"
+    neo4j_password: str | None = None
+
+    # Columnar store
+    clickhouse_host: str = "localhost"
+    clickhouse_port: int = 8123
+    clickhouse_user: str = "sentinel"
+    clickhouse_password: str | None = None
+    clickhouse_db: str = "sentinel"
+
     # PSA
     github_pat: str | None = None
     github_repo: str | None = None
