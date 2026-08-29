@@ -42,6 +42,54 @@ benign traffic flatters every detector. That mitigation is a judgement, not a pr
 The next real step is replacing generated benign traffic with the fleet's actual agent
 runs, at which point the false-positive rate becomes a measurement rather than an estimate.
 
+## Transfer: does any of this work on real behaviour?
+
+Every number above is fitted and scored on generated traces, which measures internal
+consistency and nothing else. The evaluation and adversarial suites have since produced
+**28 real `graph_agent` runs** against the live estate, all known-benign, so the question is
+now answerable: fit on generated benign, score real runs, count the alerts. Every alert is
+a false positive by construction.
+
+| Detector | Alert rate on real benign runs (before) | (after fix) |
+|---|---|---|
+| volume (hierarchical) | **0.000** | 0.000 |
+| sequence | 0.000 | 0.000 |
+| scope | 0.000 | 0.000 |
+| novel_tool | **1.000** | 0.000 |
+| rate | **0.536** | 0.000 (suppressed) |
+| **any detector** | **1.000** | **0.000** |
+
+The suite initially alerted on **every single real run**. That is the result this section
+exists for, and the per-detector split is what makes it useful rather than merely
+embarrassing.
+
+**The hierarchical model transferred; the others did not.** The Bayesian volume baseline
+scored real traffic at a 0% false-positive rate without modification, because shrinking
+toward a population prior is precisely what lets it score a group it has barely seen. The
+set-membership and per-agent detectors had no cold-start behaviour at all: `novel_tool`
+fired on 100% of runs because the *agent* was unseen, so every tool it used looked novel.
+The detector was reporting "I have not met you" on every run, forever.
+
+Applying the same idea to a set — fall back to the population's tool vocabulary for an
+unknown agent — took it to zero.
+
+**Rate is suppressed rather than pooled, and the distinction matters.** Pooling result
+*sizes* across agents is defensible: a row is a row. Pooling run *lengths* is not. A triage
+agent making three calls and a reporting agent making forty are both behaving normally, so
+the population mean describes neither — which is why scoring real runs against the
+synthetic population fired on 54% of benign traffic. You cannot baseline what you have not
+observed, and the correct output for a new agent is "not yet calibrated", not a guess. The
+detector now returns NaN, which is excluded from calibration and never raises an alert, and
+the run is reported as cold-start instead.
+
+**Recall was re-measured after the fix**, because a change that reduces alerts must be
+shown not to have reduced detection: union recall stays at 1.000, all five scenarios still
+40/40, suite FPR still 0.88%. The fix cost nothing.
+
+The transferable lesson is that pooling is not statistical elegance. It is what makes a
+detector deployable against an agent it has never seen — which, in a system where agent
+versions change weekly, is every detector's normal operating condition.
+
 ## Two corrections made during this work
 
 Both are more informative than the final numbers.

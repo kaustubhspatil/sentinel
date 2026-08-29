@@ -140,7 +140,17 @@ generated, so they are separable by construction. The honest reading is "no scen
 invisible to the suite", which would have exposed a blind spot had one existed, and
 nothing more.
 
-Two corrections during this work are more informative than the final numbers: the scope
+**Transfer to real traffic.** Fitted on generated data and scored on 28 real, known-benign
+agent runs, the suite initially alerted on **100% of them**. The per-detector split is the
+finding: the hierarchical Bayesian volume model transferred at a **0% false-positive rate**,
+while the set-membership and per-agent detectors had no cold-start behaviour and fired on
+everything — `novel_tool` flagged every tool because the *agent* was unseen. Giving them a
+population fallback (and suppressing `rate`, which cannot be pooled across agents) took the
+suite to **0%** on real traffic with union recall unchanged at 1.000. Pooling is not
+statistical elegance; it is what makes a detector deployable against an agent it has never
+seen.
+
+Two further corrections are more informative than the final numbers: the scope
 detector initially caught 1 of 25 escalations because it tested agent *familiarity* with a
 zone rather than scope consistency within a run, and the suite's false-positive rate was
 5.8% against a "1%" budget because five detectors at 1% each union to ~5%. Both are
