@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from warden import JsonlStore, Monitor, Session, default_size_of
+from agentnorm import JsonlStore, Monitor, Session, default_size_of
 
 
 def search(q: str, tenant: str = "acme") -> dict:

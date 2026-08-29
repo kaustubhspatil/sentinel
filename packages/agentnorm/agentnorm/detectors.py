@@ -25,7 +25,7 @@ import math
 from collections import defaultdict
 from dataclasses import dataclass, field
 
-from warden.trace import Run
+from agentnorm.trace import Run
 
 PRIOR_STRENGTH = 8.0
 LAPLACE_ALPHA = 0.5

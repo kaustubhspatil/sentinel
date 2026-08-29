@@ -1,0 +1,56 @@
+[project]
+name = "agentnorm"
+version = "0.1.0"
+description = "Behavioural monitoring for AI agents: runtime baselines, scope enforcement and cold-start-safe anomaly detection."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []          # deliberately none - see README
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Kaustubh Patil" }]
+keywords = [
+    "agents", "llm", "observability", "anomaly-detection", "ai-safety",
+    "monitoring", "langchain", "langgraph", "mcp",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: System :: Monitoring",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/kaustubhspatil/sentinel/tree/main/packages/agentnorm"
+Repository = "https://github.com/kaustubhspatil/sentinel"
+Issues = "https://github.com/kaustubhspatil/sentinel/issues"
+"Reference deployment" = "https://github.com/kaustubhspatil/sentinel"
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "ruff>=0.5", "build", "twine"]
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["agentnorm*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "E501",
+    # UP017 rewrites datetime.timezone.utc to datetime.UTC, which does not exist before
+    # Python 3.11. This package supports 3.10, and the CI matrix catches it - but the
+    # linter should not keep reintroducing it.
+    "UP017",
+]

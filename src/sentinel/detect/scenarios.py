@@ -22,9 +22,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from warden.trace import Run, ToolCall
+from agentnorm.trace import Run, ToolCall
 
-from sentinel.store.warden_store import ClickHouseStore
+from sentinel.store.agentnorm_store import ClickHouseStore
 
 # The benign tool vocabulary, and the order a well-behaved triage run tends to follow.
 DISCOVERY = ["list_schema", "find_entities"]

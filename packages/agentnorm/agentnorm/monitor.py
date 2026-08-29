@@ -15,8 +15,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 
-from warden.detectors import DetectorSuite
-from warden.trace import Run
+from agentnorm.detectors import DetectorSuite
+from agentnorm.trace import Run
 
 DEFAULT_BUDGET = 0.01
 

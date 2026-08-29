@@ -1,4 +1,4 @@
-# warden
+# agentnorm
 
 **Behavioural monitoring for AI agents.** Evaluation grades what an agent *said*, offline.
 This watches how it *behaves*, at runtime, and tells you when a run does not look like the
@@ -7,7 +7,7 @@ ones before it.
 Zero dependencies. No database, no framework, no context propagation.
 
 ```python
-from warden import RunRecorder, Monitor
+from agentnorm import RunRecorder, Monitor
 
 rec = RunRecorder(agent="triage", version="v3", principal="acme")
 
@@ -29,7 +29,7 @@ Hand over the tool callables you already use; get back callables with the same s
 that record as a side effect. No restructuring, no context propagation.
 
 ```python
-from warden import JsonlStore, Monitor, Session
+from agentnorm import JsonlStore, Monitor, Session
 
 store = JsonlStore("history.jsonl")
 
@@ -43,7 +43,7 @@ store.append(session.finish())
 verdict = Monitor.fit(store.read()).score(session.finish())
 ```
 
-`scope_of` is what makes cross-tenant detection possible at all - without it warden can
+`scope_of` is what makes cross-tenant detection possible at all - without it agentnorm can
 see that a call happened but not whose data it touched. Returning `None` means "unknown",
 which is treated as in-scope, because a false accusation of cross-tenant access is worse
 than a miss.
@@ -67,7 +67,7 @@ wrong tenant, unfamiliar tool, unusual path, far too much data. That is the diff
 between "something is wrong" and a page an engineer can act on at 3am.
 
 The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
-not an anomaly. warden reports that it has no history rather than alerting, and names
+not an anomaly. agentnorm reports that it has no history rather than alerting, and names
 which detectors are consequently unavailable.
 
 It also refuses to pretend about calibration:
@@ -83,16 +83,16 @@ will exceed the budget
 For frameworks that report tool calls through callbacks rather than direct invocation:
 
 ```python
-from warden import Session
-from warden.adapters.langchain import warden_callback
+from agentnorm import Session
+from agentnorm.adapters.langchain import agentnorm_callback
 
 session = Session(agent="researcher", version="v2", principal="acme")
-graph.invoke(state, config={"callbacks": [warden_callback(session)]})
+graph.invoke(state, config={"callbacks": [agentnorm_callback(session)]})
 
 verdict = monitor.score(session.finish())
 ```
 
-Works with LangChain and LangGraph. **warden still does not depend on either** - the base
+Works with LangChain and LangGraph. **agentnorm still does not depend on either** - the base
 class is imported lazily and the handler works as a plain object without it, because
 LangChain duck-types handlers in the paths that matter. That is deliberate: a monitoring
 library that drags in an agent framework is unusable by anyone running a different one,
@@ -170,14 +170,14 @@ The hierarchical model transferred untouched; the set-membership ones had no col
 behaviour at all. Detection was unchanged after the fix — union recall stayed at 1.000
 across five attack families.
 
-So every detector in warden answers "what do I do about an entity I have not observed?"
+So every detector in agentnorm answers "what do I do about an entity I have not observed?"
 explicitly:
 
 - **pool** where the quantity is comparable across agents (`volume`, `sequence`,
   `novel_tool`) — shrink toward the population rather than treating the newcomer as alien
 - **assert** where no history is needed (`scope`) — entitlement is checked, not learned
 - **suppress** where pooling would be wrong (`rate`) — run length is not comparable between
-  a triage agent making three calls and a reporting agent making forty, so warden reports
+  a triage agent making three calls and a reporting agent making forty, so agentnorm reports
   *not yet calibrated* instead of guessing
 
 ## Thresholds you can act on
@@ -190,7 +190,7 @@ The budget is stated for the suite and divided across detectors, because five de
 each firing on 1% of runs union to about 5% — a suite advertised at 1% that delivers 5%
 gets muted within a week, and a muted detector detects nothing.
 
-warden also refuses to pretend about calibration. Asked for a 0.2% quantile from 40 runs,
+agentnorm also refuses to pretend about calibration. Asked for a 0.2% quantile from 40 runs,
 it fits, and warns:
 
 ```
@@ -220,11 +220,11 @@ traces can be exported rather than trapped.
 
 ## Measuring your own detectors
 
-`warden.evaluation` scores a suite against your labelled runs and sweeps the settings that
+`agentnorm.evaluation` scores a suite against your labelled runs and sweeps the settings that
 were chosen by judgement rather than derived:
 
 ```python
-from warden.evaluation import sensitivity, format_report
+from agentnorm.evaluation import sensitivity, format_report
 
 print(format_report(sensitivity(benign_runs, labelled_attacks)))
 ```
@@ -251,9 +251,9 @@ families and against real agent traffic from one deployment. What is not yet tru
 
 ## Reference deployment
 
-warden was extracted from [Sentinel](../../README.md), an agentic IT-operations platform
+agentnorm was extracted from [Sentinel](../../README.md), an agentic IT-operations platform
 running on a live multi-cloud estate. Sentinel is where these numbers come from, and where
-warden found a real cross-tenant disclosure in Sentinel's own agent — a run scoped to one
+agentnorm found a real cross-tenant disclosure in Sentinel's own agent — a run scoped to one
 tenant returning another tenant's host and package data, because `tenant` was a parameter
 the model could set freely. A boundary the caller can rewrite is not a boundary.
 

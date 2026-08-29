@@ -1,10 +1,10 @@
-"""warden - behavioural monitoring for AI agents.
+"""agentnorm - behavioural monitoring for AI agents.
 
 Agents are unvalidated models running in production. Evaluation grades their outputs
 offline; this watches how they *behave* at runtime and says when a run does not look like
 the ones before it.
 
-    from warden import RunRecorder, Monitor
+    from agentnorm import RunRecorder, Monitor
 
     rec = RunRecorder(agent="triage", version="v3", principal="acme")
     with rec.tool_call("search", {"q": q}, scope="acme") as call:
@@ -25,11 +25,11 @@ Or instrument tools you already have, without restructuring the agent:
 
 No database, no framework, no context propagation required.
 """
-from warden.detectors import DetectorSuite
-from warden.integrations import Session, default_size_of
-from warden.monitor import Alert, Monitor, Verdict
-from warden.store import JsonlStore, Store
-from warden.trace import Run, RunRecorder, ToolCall
+from agentnorm.detectors import DetectorSuite
+from agentnorm.integrations import Session, default_size_of
+from agentnorm.monitor import Alert, Monitor, Verdict
+from agentnorm.store import JsonlStore, Store
+from agentnorm.trace import Run, RunRecorder, ToolCall
 
 __version__ = "0.1.0"
 __all__ = [

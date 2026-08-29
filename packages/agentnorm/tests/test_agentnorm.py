@@ -1,4 +1,4 @@
-"""Tests for warden.
+"""Tests for agentnorm.
 
 The cold-start tests are the important ones. They encode a failure measured on a real
 deployment: a suite fitted on one population alerted on 100% of known-benign runs from an
@@ -13,8 +13,8 @@ import random
 
 import pytest
 
-from warden import Monitor, Run, RunRecorder
-from warden.detectors import DetectorSuite
+from agentnorm import Monitor, Run, RunRecorder
+from agentnorm.detectors import DetectorSuite
 
 
 def make_run(agent="triage", version="v1", principal="acme", tools=None, sizes=None,

@@ -6,7 +6,7 @@ import random
 import tempfile
 from pathlib import Path
 
-from warden import JsonlStore, Monitor, Session
+from agentnorm import JsonlStore, Monitor, Session
 
 # --- an agent you already have -------------------------------------------------
 DB = {"acme": list(range(20)), "globex": list(range(400))}

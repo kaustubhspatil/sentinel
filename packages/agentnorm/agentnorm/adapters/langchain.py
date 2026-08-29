@@ -5,18 +5,18 @@ across concurrent tools, so the `with` block used elsewhere cannot express them.
 handler tracks open calls by the framework's `run_id` and closes each one when its
 matching end or error arrives.
 
-**warden does not depend on LangChain.** The base class is imported lazily and only if it
+**agentnorm does not depend on LangChain.** The base class is imported lazily and only if it
 is installed; without it the handler still works as a plain object, because LangChain
 duck-types handlers in the paths that matter. Keeping the dependency optional is
 deliberate: a monitoring library that drags in an agent framework is unusable by anyone
-running a different one, and half the point of warden is comparing agents across
+running a different one, and half the point of agentnorm is comparing agents across
 frameworks on equal footing.
 
-    from warden import Session
-    from warden.adapters.langchain import warden_callback
+    from agentnorm import Session
+    from agentnorm.adapters.langchain import agentnorm_callback
 
     session = Session(agent="researcher", version="v2", principal="acme")
-    graph.invoke(state, config={"callbacks": [warden_callback(session)]})
+    graph.invoke(state, config={"callbacks": [agentnorm_callback(session)]})
 
     verdict = monitor.score(session.finish())
 """
@@ -26,8 +26,8 @@ from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
-from warden.integrations import Session, default_size_of
-from warden.trace import RunRecorder, ToolCall
+from agentnorm.integrations import Session, default_size_of
+from agentnorm.trace import RunRecorder, ToolCall
 
 
 def _base_class() -> type:
@@ -40,7 +40,7 @@ def _base_class() -> type:
         return object
 
 
-class WardenCallbackHandlerMixin:
+class AgentNormCallbackHandlerMixin:
     """The recording logic, independent of whether LangChain is installed."""
 
     # LangChain inspects these on handlers; supplied so a plain object still behaves.
@@ -122,7 +122,7 @@ class WardenCallbackHandlerMixin:
         return self._rec.finish()
 
 
-def warden_callback(
+def agentnorm_callback(
     target: Session | RunRecorder,
     *,
     size_of: Callable[[str, dict[str, Any], Any], int] | None = None,
@@ -135,6 +135,6 @@ def warden_callback(
     recorder = target._rec if isinstance(target, Session) else target
     base = _base_class()
     handler_cls = type(
-        "WardenCallbackHandler", (WardenCallbackHandlerMixin, base), {}
+        "AgentNormCallbackHandler", (AgentNormCallbackHandlerMixin, base), {}
     )
     return handler_cls(recorder, size_of=size_of, scope_of=scope_of)
