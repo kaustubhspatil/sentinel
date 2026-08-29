@@ -25,7 +25,9 @@ the Results section stays empty rather than aspirational.
 | Ontology and design rationale | drafted |
 | Backbone host (Neo4j, ClickHouse, Redpanda, Temporal, Postgres) | running |
 | Reference-data load into graph and columnar store | working |
-| Fleet nodes | not started |
+| Fleet nodes (multi-cloud, node_exporter + osquery + Alloy) | running |
+| Estate + inventory load | working |
+| Version-aware CVE matching (CPE) | **not started - see caveat below** |
 | MCP tool server | not started |
 | Anomaly detection | not started |
 | Evaluation harness | not started |
@@ -34,8 +36,20 @@ Currently loaded, from live feeds:
 
 | Store | Contents |
 |---|---|
-| Neo4j | 1,685 KEV vulnerabilities · 697 ATT&CK techniques · 44 mitigations · 15 tactics · 2,795 relationships |
+| Neo4j | 1,685 KEV vulnerabilities · 697 ATT&CK techniques · 44 mitigations · 15 tactics · 3 hosts · 1,293 package installs · 692 packages · 2 tenants |
 | ClickHouse | 365,950 EPSS scores/day (4.6 MiB/day compressed) |
+
+### Caveat on CVE matching
+
+The graph currently joins packages to CVEs on a hand-written product-name map, which
+answers *"is a package called openssl installed"* - **not** *"is the installed version
+vulnerable"*. On a patched Ubuntu 24.04 host those are very different questions, and the
+current exposure counts are therefore dominated by false positives.
+
+This is stated rather than hidden because the number is meaningless without it. Every such
+edge carries `match_method` and `confidence` so it can be filtered or re-derived, and
+version-aware matching against NVD CPE data is the next piece of work. Until then, no
+exposure figure from this graph should be treated as a finding.
 
 The split is the architecture working as designed: the graph holds the ~1.7k CVEs an
 operator reasons about, while the third of a million daily exploit-probability scores stay
