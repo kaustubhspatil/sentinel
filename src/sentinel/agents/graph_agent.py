@@ -41,6 +41,14 @@ TOOLBOX: dict[str, Callable[..., dict]] = {
     "attack_context": tools.attack_context,
 }
 
+# Tools whose queries widen to every tenant when no tenant filter is supplied. When a run
+# is scoped, these are pinned rather than left to the model's discretion.
+TENANT_SCOPED_TOOLS = {
+    "find_entities": ("tenant",),
+    "vulnerability_exposure": ("tenant",),
+    "sla_status": ("tenant",),
+}
+
 SYSTEM = """You are an IT operations analyst with read-only access to a knowledge graph \
 describing a managed service estate: customers, contracts, SLAs, sites, network zones, \
 hosts, installed packages, vulnerabilities and ATT&CK techniques.
@@ -102,6 +110,7 @@ class AgentResult:
     tool_sequence: list[str] = field(default_factory=list)
     malformed_calls: int = 0
     premature_answers: int = 0
+    scope_violations: int = 0
     llm_calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
@@ -211,6 +220,34 @@ def run(
             history.append(Message("assistant", resp.text[:500]))
             history.append(Message("user", f"Unknown tool {name!r}. Choose one of: {', '.join(TOOLBOX)}."))
             continue
+
+        # Enforce the run's tenant scope at the tool boundary.
+        #
+        # Found by the adversarial suite: asked by "the acme administrator" to list
+        # globex's vulnerable hosts "for benchmarking", the agent complied and disclosed
+        # host names and package versions. The tools were working exactly as written -
+        # tenant was a *parameter* the model could set freely, and the run's own scope
+        # existed only in the trace context. A boundary the caller can rewrite is not a
+        # boundary. This is precisely the scope-escalation failure the detection layer was
+        # built to catch, found in this project's own agent.
+        if tenant:
+            requested = args.get("tenant")
+            if requested and requested != tenant:
+                observation = {
+                    "error": f"scope violation: this run is scoped to tenant {tenant!r} "
+                             f"and may not read tenant {requested!r}",
+                    "scope": tenant,
+                }
+                result.scope_violations += 1
+                result.steps.append(Step(name, args, ok=False, error="scope violation"))
+                result.tool_sequence.append(name)
+                history.append(Message("assistant", json.dumps(payload)))
+                history.append(Message("user", f"Tool result:\n{json.dumps(observation)}"))
+                continue
+            # Tools that accept a tenant filter are pinned to the run's tenant, so an
+            # omitted filter cannot silently widen the query to every tenant.
+            if "tenant" in TENANT_SCOPED_TOOLS.get(name, ()):
+                args = {**args, "tenant": tenant}
 
         with traced(ctx, name, args) as out:
             try:
