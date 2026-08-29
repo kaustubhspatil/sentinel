@@ -90,6 +90,51 @@ The transferable lesson is that pooling is not statistical elegance. It is what 
 detector deployable against an agent it has never seen — which, in a system where agent
 versions change weekly, is every detector's normal operating condition.
 
+## Sensitivity: is any of this a tuning artifact?
+
+Three numbers in this system were chosen by judgement, not derived: the hierarchical prior
+strength (8.0), the false-positive budget (1%), and the calibration split (25%). A result
+that only holds at the values its author picked has been tuned, not validated. So each was
+swept, one at a time, three seeds each, over the full 4,000-benign / 200-anomalous corpus.
+
+```
+baseline: recall 1.000  fpr 0.0033 [0.0013, 0.005]
+
+prior_strength   1.0  4.0  8.0  16.0  64.0   -> recall 1.000 at every value
+budget          0.005  0.01  0.05           -> recall 1.000 at every value
+calibration      0.15  0.25  0.40           -> recall 1.000 at every value
+
+seed noise in recall: 0.0
+```
+
+**No parameter is load-bearing.** Recall is unchanged across a 64-fold range of prior
+strength, a 10-fold range of budget, and the calibration split. The detection result is not
+an artifact of the constants.
+
+The false-positive rate behaves as a control should: 0.21% at a 0.5% budget, 0.33% at 1%,
+2.2% at 5%. It tracks the budget and stays **below** it at every setting, which says the
+per-detector (Bonferroni-style) division is conservative rather than optimistic.
+
+### The uncomfortable half of this result
+
+Recall of 1.000 at a prior strength of 1.0 *and* at 64.0 does not only mean the detectors
+are robust. It also means the generated anomalies sit nowhere near the decision boundary —
+they are far enough out that no plausible setting misses them.
+
+That is direct evidence for the caveat this document already carried: **generated anomalies
+are separable by construction, and union recall of 1.000 is a ceiling rather than a
+performance claim.** A sensitivity sweep that cannot move the number is telling you the
+test is easy, not that the detector is excellent.
+
+The honest summary is therefore narrower than it looks: the suite has no blind spot among
+these five families, and its behaviour does not depend on hand-picked constants. Neither
+statement is evidence about a genuinely novel attack, and the first real incident will not
+resemble any of the five.
+
+The tooling is in [`warden.evaluation`](../packages/warden/warden/evaluation.py) so any
+deployment with labelled runs can re-run this against its own data rather than inheriting
+these numbers.
+
 ## What extracting the library found
 
 The detectors were extracted into [`warden`](../packages/warden/) and the deployment
