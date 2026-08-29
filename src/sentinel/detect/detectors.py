@@ -248,7 +248,22 @@ class NovelTool:
 
 
 class RateBaseline:
-    """Calls per run against the agent's own distribution."""
+    """Calls per run against the agent's own distribution.
+
+    Returns NaN for an agent with no fitted history, which suppresses the detector rather
+    than scoring against the population.
+
+    That is a deliberate difference from the volume and tool detectors, and the reason is
+    that run length is not a shared property. Pooling result *sizes* across agents is
+    defensible - a row is a row. Pooling run *lengths* is not: a triage agent that makes
+    three calls and a reporting agent that makes forty are both behaving normally, so the
+    population mean describes neither. Measured: scoring real runs against the synthetic
+    population fired on 54% of known-benign runs, purely because the real agent is
+    shorter-running than the generated ones.
+
+    You cannot baseline what you have not observed. The correct behaviour on a new agent
+    is to say "not yet calibrated", not to guess.
+    """
 
     def __init__(self) -> None:
         self.stats: dict[str, tuple[float, float]] = {}
@@ -269,7 +284,10 @@ class RateBaseline:
         return self
 
     def score(self, run: Run) -> float:
-        m, var = self.stats.get(run.agent, self.fallback)
+        stats = self.stats.get(run.agent)
+        if stats is None:
+            return math.nan  # uncalibrated for this agent; suppressed rather than guessed
+        m, var = stats
         return abs(math.log1p(run.n_calls) - m) / math.sqrt(var)
 
 

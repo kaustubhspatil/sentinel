@@ -23,6 +23,7 @@ threat to these numbers.
 from __future__ import annotations
 
 import json
+import math
 import random
 from dataclasses import dataclass
 from typing import Any
@@ -82,10 +83,19 @@ class TransferReport:
 
 
 def _thresholds(suite: DetectorSuite, calib: list[Run], budget: float) -> dict[str, float]:
-    scores = {k: [] for k in DetectorSuite.NAMES}
+    """Calibrate on finite scores only.
+
+    A NaN means "this detector is not calibrated for this agent". Including NaNs in the
+    quantile would corrupt the threshold; treating them as zero would make every
+    uncalibrated run look normal. They are excluded from calibration and, in scoring,
+    a NaN comparison is False so no alert is raised - the run is reported as
+    uncalibrated instead.
+    """
+    scores: dict[str, list[float]] = {k: [] for k in DetectorSuite.NAMES}
     for r in calib:
         for k, v in suite.score(r).items():
-            scores[k].append(v)
+            if not math.isnan(v):
+                scores[k].append(v)
     return {k: _quantile(v, 1 - budget) for k, v in scores.items()}
 
 
