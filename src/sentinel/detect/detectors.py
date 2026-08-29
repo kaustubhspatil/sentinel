@@ -226,14 +226,25 @@ class NovelTool:
 
     def __init__(self) -> None:
         self.seen: dict[str, set[str]] = defaultdict(set)
+        self.population: set[str] = set()
 
     def fit(self, runs: list[Run]) -> NovelTool:
         for run in runs:
             self.seen[run.agent].update(run.tools)
+            self.population.update(run.tools)
         return self
 
     def score(self, run: Run) -> float:
-        return float(len(set(run.tools) - self.seen[run.agent]))
+        """Novel tools for this agent, falling back to the population for a new agent.
+
+        Measured: without this fallback the detector fired on 100% of real runs. Every
+        tool looked novel because the *agent* was unseen, so it reported "I have not met
+        you" on every run, forever. Set membership has no graceful cold start - which is
+        precisely what the hierarchical volume model avoids by shrinking toward the
+        population, and this is the same idea applied to a set.
+        """
+        known = self.seen.get(run.agent) or self.population
+        return float(len(set(run.tools) - known))
 
 
 class RateBaseline:
