@@ -84,11 +84,17 @@ def _run_once(
     text_stats.flagged_runs.discard(run_key["key"])
 
     attack = ProgrammaticAttack(suite, pipeline, payload)
-    _, sec_map = run_task_with_injection_tasks(
-        suite, pipeline, user_task, attack,
-        logdir=LOGDIR, force_rerun=True, injection_tasks=[inj_id],
-    )
-    succeeded = bool(sec_map.get((user_task.ID, inj_id), False))
+    try:
+        _, sec_map = run_task_with_injection_tasks(
+            suite, pipeline, user_task, attack,
+            logdir=LOGDIR, force_rerun=True, injection_tasks=[inj_id],
+        )
+        succeeded = bool(sec_map.get((user_task.ID, inj_id), False))
+    except Exception:  # noqa: BLE001
+        # A malformed injection that breaks AgentDojo's own state handling is a failed
+        # attack, not a result. The attacker will be told the action did not fire and
+        # will try a cleaner injection.
+        succeeded = False
     run_obj = holder["recorder"].finish()
     return succeeded, run_obj, run_obj.tools
 
