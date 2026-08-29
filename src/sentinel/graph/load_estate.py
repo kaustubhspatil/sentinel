@@ -14,7 +14,6 @@ from pathlib import Path
 
 import yaml
 
-from sentinel.config import settings
 from sentinel.graph.client import session
 
 DEFAULT_ESTATE = Path(__file__).resolve().parents[3] / "deploy" / "estate.yaml"

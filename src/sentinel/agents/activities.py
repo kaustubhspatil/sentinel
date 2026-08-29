@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from temporalio import activity
@@ -144,7 +144,7 @@ async def open_ticket(tenant: str, plan: dict[str, Any], findings: list[dict[str
     retry storm that opens forty tickets is precisely the failure durable execution is
     supposed to prevent, not cause.
     """
-    ticket_id = f"INC-{tenant}-{datetime.now(timezone.utc):%Y%m%d%H%M%S}"
+    ticket_id = f"INC-{tenant}-{datetime.now(UTC):%Y%m%d%H%M%S}"
     with session() as s:
         s.run(
             """
@@ -191,7 +191,7 @@ async def verify(tenant: str, packages: list[str]) -> dict[str, Any]:
     return {
         "still_exposed_packages": rec["still_exposed"] if rec else 0,
         "open_cves": rec["open_cves"] if rec else 0,
-        "verified_at": datetime.now(timezone.utc).isoformat(),
+        "verified_at": datetime.now(UTC).isoformat(),
     }
 
 

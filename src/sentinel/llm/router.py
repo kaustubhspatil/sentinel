@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sentinel.llm.base import LLMResponse, Message, ModelSpec
 from sentinel.llm.providers import PROVIDERS
@@ -128,7 +128,7 @@ class Router:
             client().insert(
                 "llm_calls",
                 [(
-                    datetime.now(timezone.utc), purpose, tier, resp.provider, resp.model,
+                    datetime.now(UTC), purpose, tier, resp.provider, resp.model,
                     1 if resp.ok else 0, 1 if resp.fell_back else 0,
                     resp.input_tokens, resp.output_tokens, resp.latency_ms,
                     spec.cost_usd(resp.input_tokens, resp.output_tokens),

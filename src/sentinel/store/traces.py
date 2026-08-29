@@ -24,10 +24,11 @@ from __future__ import annotations
 import json
 import time
 import uuid
+from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Iterator
+from datetime import UTC, datetime
+from typing import Any
 
 from sentinel.store.clickhouse import client
 
@@ -103,7 +104,7 @@ def record(
 ) -> None:
     _BUFFER.append(
         (
-            datetime.now(timezone.utc),
+            datetime.now(UTC),
             ctx.run_id,
             ctx.next_step(),
             ctx.agent,
@@ -147,7 +148,7 @@ def traced(ctx: RunContext, tool: str, args: dict[str, Any]) -> Iterator[dict[st
     out: dict[str, Any] = {"result_rows": 0, "output_bytes": 0, "resource": "", "zone": ""}
     try:
         yield out
-    except Exception as exc:  # noqa: BLE001 - recorded then re-raised
+    except Exception as exc:
         record(
             ctx, tool, args, ok=False,
             duration_ms=int((time.perf_counter() - started) * 1000),

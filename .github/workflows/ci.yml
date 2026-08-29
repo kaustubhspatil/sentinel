@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e ".[dev]"
+      - name: Unit tests
+        run: pytest -q
+      - name: Lint
+        run: ruff check src tests
+
+  quality-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      # The evaluation itself runs on the backbone, which holds the graph and is
+      # reachable only from the operator's IP. CI enforces the committed report's
+      # thresholds, including its age, so a stale pass cannot masquerade as a fresh one.
+      - name: Evaluation regression gate
+        run: python -m sentinel.eval.gate

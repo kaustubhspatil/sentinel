@@ -1,8 +1,8 @@
 """Neo4j connection handling."""
 from __future__ import annotations
 
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator
 
 from neo4j import Driver, GraphDatabase
 
