@@ -66,6 +66,15 @@ def apply_schema() -> None:
     client().command(LLM_DDL)
 
 
+# Deployments that route to a reasoning model spend hidden reasoning tokens out of the
+# same budget as the visible answer. A budget that looks generous for the answer alone
+# can be consumed entirely before a single output character is produced - measured here:
+# max_tokens=150 returned an empty completion with 150 completion tokens billed, while
+# 1200 returned 308 tokens of real output. The floor exists so a caller cannot ask for a
+# budget that is arithmetically incapable of producing an answer.
+MIN_OUTPUT_TOKENS = 1024
+
+
 @dataclass
 class Router:
     """Try the preferred model for a tier, fall back down the list on failure."""
@@ -91,6 +100,8 @@ class Router:
         run_id: str = "",
         **kwargs,
     ) -> LLMResponse:
+        kwargs["max_tokens"] = max(int(kwargs.get("max_tokens", MIN_OUTPUT_TOKENS)),
+                                   MIN_OUTPUT_TOKENS)
         candidates = self._candidates(tier, prefer)
         if not candidates:
             return LLMResponse("", "none", "", error="no configured provider for tier")
