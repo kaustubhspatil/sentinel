@@ -49,6 +49,7 @@ sudo tee /etc/osquery/osquery.conf >/dev/null <<OSQ
 {
   "options": {
     "logger_path": "/var/log/osquery",
+    "logger_mode": "0644",
     "schedule_splay_percent": 10,
     "utc": "true",
     "host_identifier": "hostname"
@@ -140,9 +141,10 @@ loki.write "cloud" {
 }
 ALLOY
 
-# Alloy runs as its own user and cannot read root-owned osquery logs by default.
-sudo usermod -aG adm alloy 2>/dev/null || true
-sudo chmod 0644 /var/log/osquery/osqueryd.results.log 2>/dev/null || true
+# Alloy runs as its own user, and osquery writes its result log 0600 root:root by
+# default - so the log ships nothing and fails silently. logger_mode above fixes new
+# files; this handles a log that already exists from a previous run.
+sudo chmod 0644 /var/log/osquery/*.log 2>/dev/null || true
 
 sudo systemctl enable --now alloy
 sudo systemctl restart alloy
