@@ -64,25 +64,11 @@ jobs:
         with:
           python-version: "3.11"
       # The zero-dependency claim is the library's main adoption argument, so it is
-      # enforced rather than asserted in prose.
-      - name: Assert no third-party imports
+      # enforced rather than asserted in prose. Lazy imports inside functions are how
+      # optional adapters work and are allowed; a module-scope import is not.
+      - name: Assert no third-party imports at module scope
         working-directory: packages/warden
-        run: |
-          python - <<'PY'
-          import ast, pathlib, sys
-          stdlib = set(sys.stdlib_module_names)
-          external = set()
-          for f in pathlib.Path("warden").rglob("*.py"):
-              for node in ast.walk(ast.parse(f.read_text(encoding="utf-8"))):
-                  if isinstance(node, ast.Import):
-                      external.update(a.name.split(".")[0] for a in node.names)
-                  elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-                      external.add(node.module.split(".")[0])
-          leaked = sorted(m for m in external if m not in stdlib and m != "warden")
-          if leaked:
-              raise SystemExit(f"warden gained third-party dependencies: {leaked}")
-          print("zero-dependency claim holds")
-          PY
+        run: python tools/check_zero_deps.py
 
   quality-gate:
     name: evaluation regression gate
