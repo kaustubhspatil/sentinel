@@ -141,7 +141,7 @@ anomalous across five scenarios.
 | scope | 1.000 | 0.200 | 0 |
 | novel_tool | 1.000 | 0.200 | 0 |
 | rate | 1.000 | 0.200 | 0 |
-| **union** | — | **1.000** | **7 (0.88%)** |
+| **union** | — | **1.000** | **1 (0.13%)** |
 
 Per-detector recall near 0.2 is expected: each targets one of five failure families, so
 owning one family completely *is* 0.2 overall. The suite is the unit of analysis.
@@ -150,6 +150,12 @@ owning one family completely *is* 0.2 overall. The suite is the unit of analysis
 generated, so they are separable by construction. The honest reading is "no scenario is
 invisible to the suite", which would have exposed a blind spot had one existed, and
 nothing more.
+
+**Extracting the library found two more bugs.** Migrating this deployment onto `warden`
+broke scope detection entirely (40/40 → 0/40: scope ids are opaque, not copies of the
+principal's name, so every benign call read as a violation) and made sequence surprisal
+alert on 100% of benign runs from a new agent version. Both were library bugs invisible
+against generated fixtures. Fixed, the suite is better than before: false positives 7 → 1.
 
 **Transfer to real traffic.** Fitted on generated data and scored on 28 real, known-benign
 agent runs, the suite initially alerted on **100% of them**. The per-detector split is the

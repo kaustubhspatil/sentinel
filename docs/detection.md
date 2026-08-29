@@ -16,7 +16,7 @@ scenarios. Thresholds are set on the calibration split and never touch the test 
 | scope | 0.000 | 1.000 | 0.200 | 0 |
 | novel_tool | 0.000 | 1.000 | 0.200 | 0 |
 | rate | 2.722 | 1.000 | 0.200 | 0 |
-| **union (any fires)** | — | — | **1.000** | **7 (0.88%)** |
+| **union (any fires)** | — | — | **1.000** | **1 (0.13%)** |
 
 Coverage by scenario, union: `scope_escalation 40/40 · output_volume 40/40 ·
 abnormal_sequence 40/40 · unexpected_tool 40/40 · burst_rate 40/40`.
@@ -89,6 +89,32 @@ shown not to have reduced detection: union recall stays at 1.000, all five scena
 The transferable lesson is that pooling is not statistical elegance. It is what makes a
 detector deployable against an agent it has never seen — which, in a system where agent
 versions change weekly, is every detector's normal operating condition.
+
+## What extracting the library found
+
+The detectors were extracted into [`warden`](../packages/warden/) and the deployment
+migrated onto it. Two results broke immediately, and both were library bugs rather than
+migration mistakes — neither was visible against generated data.
+
+**Scope ownership was assumed rather than learned.** warden compared a call's scope to the
+run's principal as strings, which is correct only when a scope is a copy of the
+principal's name. Here scopes are network-zone ids, so *every benign call* looked like a
+violation, the threshold calibrated away, and the detector then caught **0 of 40** real
+escalations — having caught 40 of 40 before. Ownership is now learned from benign traffic:
+which principal does each scope belong to. An unseen scope falls back to direct comparison.
+
+**Sequence surprisal was pooled when it should be suppressed.** Transition structure is
+agent-specific, like run length and unlike result size: a triage agent's normal path is no
+evidence about a reporting agent's. Pooling it alerted on 100% of known-benign runs from a
+new agent version.
+
+Both are the same lesson as the cold-start work — pool only what is genuinely comparable
+across agents — and fixing them left the suite measurably better than before the
+migration: false positives fell from 7 to 1 (0.88% → 0.13%) with recall unchanged at
+1.000 across all five families.
+
+That is the argument for a reference deployment. A library validated only against its own
+fixtures agrees with itself.
 
 ## Two corrections made during this work
 
