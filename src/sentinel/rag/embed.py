@@ -24,7 +24,14 @@ from sentinel.rag.corpus import Document
 
 MODEL = "text-embedding-3-small"
 DIMS = 1536
-BATCH = 64
+# Batch size is a throughput lever, not a tuning detail. This deployment rejects roughly
+# nine requests in ten with a transient 404, and the rejection is per *request* rather
+# than per document - so packing more documents into each accepted request is the only
+# thing that meaningfully speeds up indexing. Batches are packed by estimated token count
+# rather than a fixed document count, because the API limits tokens per request and the
+# corpus mixes 200-character CVE descriptions with multi-page ATT&CK write-ups.
+MAX_BATCH_DOCS = 300
+MAX_BATCH_TOKENS = 90_000
 TIMEOUT = httpx.Timeout(120.0, connect=15.0)
 
 DDL = f"""
@@ -93,6 +100,24 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     return [item["embedding"] for item in sorted(data, key=lambda d: d["index"])]
 
 
+def _pack(docs: list[Document]) -> list[list[Document]]:
+    """Group documents into requests bounded by both token estimate and count."""
+    batches: list[list[Document]] = []
+    current: list[Document] = []
+    tokens = 0
+    for d in docs:
+        # ~4 characters per token is close enough for a batching bound.
+        cost = min(len(d.content), 8000) // 4 + 1
+        if current and (tokens + cost > MAX_BATCH_TOKENS or len(current) >= MAX_BATCH_DOCS):
+            batches.append(current)
+            current, tokens = [], 0
+        current.append(d)
+        tokens += cost
+    if current:
+        batches.append(current)
+    return batches
+
+
 @dataclass
 class EmbedStats:
     documents: int = 0
@@ -120,8 +145,7 @@ def index_documents(docs: list[Document]) -> EmbedStats:
         else:
             pending.append(d)
 
-    for i in range(0, len(pending), BATCH):
-        chunk = pending[i : i + BATCH]
+    for chunk in _pack(pending):
         vectors = embed_texts([d.content[:8000] for d in chunk])
         with conn.cursor() as cur:
             cur.executemany(
