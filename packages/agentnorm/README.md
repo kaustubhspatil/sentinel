@@ -239,6 +239,34 @@ That result cuts both ways, and the second half matters more. Recall that cannot
 by any setting also means the generated attacks sit nowhere near the decision boundary: the
 test is easy, which is evidence for the ceiling caveat below rather than against it.
 
+## Alternatives
+
+This is a small library in a category that is filling up. Worth knowing before you pick it:
+
+| | what it is | pick it over agentnorm when |
+|---|---|---|
+| [AgentOps](https://github.com/AgentOps-AI/agentops) | mature agent monitoring SDK: cost tracking, benchmarking, broad framework coverage | you want the widest framework support and a hosted product behind it |
+| [Agentomaly](https://github.com/sushaan-k/agentomaly) | runtime behavioural anomaly detection over OpenTelemetry, with Slack/PagerDuty/Jaeger wiring | you already run OTel and want alerting plumbed into existing infrastructure |
+| AgentLens | MCP-native observability with an append-only hash-chained audit log | you want a platform rather than a library, and MCP is your primary surface |
+| TRACE | hardware-attested trust records binding model, policy and tool calls into a signed artifact | you need offline third-party verification and can run in a TEE — this is strictly stronger than hash chaining alone |
+
+**What agentnorm does differently.** Two things, and they are narrow:
+
+**Cold start is handled explicitly.** The others learn a baseline from historical traces —
+Agentomaly's trainer takes `min_traces=100` — and do not say what happens to an agent with no
+history. Measured here: a suite without cold-start handling alerts on **100% of known-benign
+runs** from an unseen agent version. Since agent versions change weekly, that is the normal
+operating condition rather than an edge case. agentnorm decides *per detector* whether a
+quantity may be pooled across identities, asserted without history, or must be suppressed as
+uncalibrated — and reports which.
+
+**Zero dependencies.** Enforced in CI by walking the AST, not asserted in prose. It installs
+into a locked-down environment and adds nothing to your dependency tree.
+
+**Where it is weaker.** Fewer integrations than AgentOps or Agentomaly. No hosted backend, no
+dashboard, no alert routing. And hash chaining gives integrity, not the offline third-party
+verification TRACE achieves with hardware attestation.
+
 ## Status
 
 Early, and honest about it. The detectors are validated against five labelled attack
