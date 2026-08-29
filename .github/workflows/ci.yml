@@ -93,6 +93,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # sentinel depends on warden, which is a sibling in this repo rather than a
+      # release. pip does not read [tool.uv.sources], so the path install is explicit.
+      - run: pip install -e ./packages/warden
       - run: pip install -e .
       # The evaluation itself runs on the backbone, which holds the graph and is
       # reachable only from the operator's IP. CI enforces the committed report's
