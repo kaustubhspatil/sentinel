@@ -58,6 +58,10 @@ class Settings(BaseSettings):
     clickhouse_password: str | None = None
     clickhouse_db: str = "sentinel"
 
+    # Durable execution
+    temporal_address: str = "localhost:7233"
+    temporal_namespace: str = "default"
+
     # PSA
     github_pat: str | None = None
     github_repo: str | None = None
