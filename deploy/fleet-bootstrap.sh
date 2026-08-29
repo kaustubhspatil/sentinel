@@ -37,6 +37,12 @@ if ! command -v osqueryd >/dev/null 2>&1; then
   sudo -E apt-get install -y -qq osquery
 fi
 
+# Scheduled queries are differential by default: the first execution stores a baseline
+# and logs nothing, so results only appear on the second run. deb_packages is marked
+# snapshot so every execution emits the full inventory - it is the join key to the CVE
+# graph and must not arrive as a diff. Its interval is 900s during build-out for a
+# workable feedback loop; 3600s is the sane production value.
+# (Comment kept out of the JSON below: osquery's config is parsed as strict JSON.)
 log "osquery schedule"
 sudo mkdir -p /etc/osquery /var/log/osquery
 sudo tee /etc/osquery/osquery.conf >/dev/null <<OSQ
@@ -49,7 +55,7 @@ sudo tee /etc/osquery/osquery.conf >/dev/null <<OSQ
   },
   "schedule": {
     "os_version":        { "query": "SELECT name, version, build, platform FROM os_version;", "interval": 3600 },
-    "deb_packages":      { "query": "SELECT name, version, arch FROM deb_packages;", "interval": 3600, "snapshot": true },
+    "deb_packages":      { "query": "SELECT name, version, arch FROM deb_packages;", "interval": 900, "snapshot": true },
     "listening_ports":   { "query": "SELECT DISTINCT pid, port, protocol, address FROM listening_ports WHERE port != 0;", "interval": 600 },
     "logged_in_users":   { "query": "SELECT user, tty, host, time FROM logged_in_users;", "interval": 300 },
     "last_logins":       { "query": "SELECT username, tty, host, time, type FROM last WHERE time > 0;", "interval": 600 },
