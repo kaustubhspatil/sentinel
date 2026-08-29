@@ -151,3 +151,51 @@ def test_verdict_explains_itself():
 def test_empty_fit_is_rejected():
     with pytest.raises(ValueError):
         Monitor.fit([])
+
+
+# --- learned scope ownership -----------------------------------------------------
+
+def opaque_run(principal: str, scopes: list[str]) -> Run:
+    """Scopes are opaque ids (a VPC, a workspace) - never a copy of the principal name."""
+    return make_run(principal=principal, tools=["list"] * len(scopes),
+                    sizes=[5] * len(scopes), scopes=scopes)
+
+
+def test_scope_ownership_is_learned_not_assumed():
+    """The regression found by deploying against a real estate.
+
+    Scopes were network-zone ids, so a direct principal==scope comparison marked every
+    benign call a violation. The threshold calibrated away and the detector then caught
+    none of 40 genuine escalations.
+    """
+    history = (
+        [opaque_run("acme", ["vpc-1", "vpc-1"]) for _ in range(30)]
+        + [opaque_run("globex", ["vpc-2", "vpc-2"]) for _ in range(30)]
+    )
+    suite = DetectorSuite.fit(history)
+
+    assert suite.score(opaque_run("acme", ["vpc-1"]))["scope"].value == 0.0, \
+        "an opaque scope owned by this principal is not a violation"
+    assert suite.score(opaque_run("acme", ["vpc-2"]))["scope"].value == 1.0, \
+        "reaching into another principal's scope is a violation"
+
+
+def test_unknown_scope_falls_back_to_direct_comparison():
+    suite = DetectorSuite.fit([opaque_run("acme", ["vpc-1"]) for _ in range(5)])
+    assert suite.score(opaque_run("acme", ["never-seen"]))["scope"].value == 1.0
+
+
+# --- sequence suppression --------------------------------------------------------
+
+def test_sequence_is_suppressed_for_an_unseen_agent():
+    """Transition structure is agent-specific; pooling it alerted on 100% of benign runs."""
+    suite = DetectorSuite.fit(benign_population())
+    score = suite.score(make_run(agent="stranger", version="v1"))["sequence"]
+    assert score.suppressed
+    assert score.calibrated is False
+
+
+def test_sequence_still_scores_a_known_agent():
+    suite = DetectorSuite.fit(benign_population())
+    score = suite.score(make_run())["sequence"]
+    assert not score.suppressed

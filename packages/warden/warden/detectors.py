@@ -14,8 +14,8 @@ no loss of detection.
 So each detector answers "what do I do about an entity I have not observed?" explicitly:
 
   volume      pool - shrink toward the population prior (a row is a row)
-  sequence    pool - fall back to population transition statistics
-  scope       assert - no history needed; entitlement is checked, not learned
+  sequence    suppress - transition structure is agent-specific, not comparable
+  scope       assert - entitlement is checked, with scope ownership learned
   novel_tool  pool - fall back to the population's tool vocabulary
   rate        suppress - run length is not comparable across agents, so do not guess
 """
@@ -112,27 +112,26 @@ class SequenceModel:
         self.counts: dict[str, dict[tuple[str, str], float]] = defaultdict(lambda: defaultdict(float))
         self.context: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         self.vocab: dict[str, set[str]] = defaultdict(set)
-        self.pop_counts: dict[tuple[str, str], float] = defaultdict(float)
-        self.pop_context: dict[str, float] = defaultdict(float)
-        self.pop_vocab: set[str] = set()
 
     def fit(self, runs: list[Run]) -> SequenceModel:
         for run in runs:
             seq = ["<start>", *run.tools, "<end>"]
             self.vocab[run.key].update(seq)
-            self.pop_vocab.update(seq)
             for a, b in zip(seq, seq[1:], strict=False):
                 self.counts[run.key][(a, b)] += 1
                 self.context[run.key][a] += 1
-                self.pop_counts[(a, b)] += 1
-                self.pop_context[a] += 1
         return self
 
     def score(self, run: Run) -> Score:
-        known = run.key in self.vocab
-        counts = self.counts[run.key] if known else self.pop_counts
-        context = self.context[run.key] if known else self.pop_context
-        vocab = max(len(self.vocab[run.key] if known else self.pop_vocab), 1)
+        # Transition structure is agent-specific, like run length and unlike result size.
+        # A triage agent's normal path is not evidence about a reporting agent's, so the
+        # population model describes neither. Measured: pooling it alerted on 100% of
+        # known-benign runs from an unseen agent. Suppressed instead.
+        if run.key not in self.vocab:
+            return Score(self.name, math.nan, calibrated=False)
+        counts = self.counts[run.key]
+        context = self.context[run.key]
+        vocab = max(len(self.vocab[run.key]), 1)
 
         seq = ["<start>", *run.tools, "<end>"]
         total = 0.0
@@ -140,7 +139,7 @@ class SequenceModel:
             num = counts.get((a, b), 0.0) + self.alpha
             den = context.get(a, 0.0) + self.alpha * vocab
             total += -math.log(num / den)
-        return Score(self.name, total / max(len(seq) - 1, 1), calibrated=known)
+        return Score(self.name, total / max(len(seq) - 1, 1))
 
 
 class ScopeViolation:
@@ -151,19 +150,50 @@ class ScopeViolation:
     agents legitimately serve many principals, so once one has worked for both, every
     scope is familiar and nothing looks novel. Familiarity was the wrong invariant.
 
-    Scope consistency *within a run* is the right one, it needs no history, and it caught
-    40 of 40.
+    Scope *ownership* is the right one. In practice a scope is an opaque identifier - a
+    VPC, a project, a workspace, a namespace - not a copy of the principal's name, so
+    comparing the two strings directly is wrong in both directions. Deployed against a
+    real estate where scopes were network-zone ids, a direct comparison marked every
+    benign call a violation, which calibrated the threshold so high that it then caught
+    none of 40 real escalations.
+
+    So ownership is learned from benign traffic: which principal does each scope belong
+    to? A run violates scope when it touches a scope owned by someone else. A scope never
+    seen during fit falls back to direct comparison, which is the only safe guess.
     """
 
     name = "scope"
 
-    def fit(self, runs: list[Run]) -> ScopeViolation:  # noqa: ARG002 - no history needed
+    def __init__(self) -> None:
+        self.owner: dict[str, str] = {}
+
+    def fit(self, runs: list[Run]) -> ScopeViolation:
+        tally: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for run in runs:
+            if not run.principal:
+                continue
+            for call in run.calls:
+                if call.scope:
+                    tally[call.scope][run.principal] += 1
+        self.owner = {
+            scope: max(owners.items(), key=lambda kv: kv[1])[0]
+            for scope, owners in tally.items()
+        }
         return self
 
     def score(self, run: Run) -> Score:
         if not run.principal:
             return Score(self.name, math.nan, calibrated=False)
-        violations = sum(1 for c in run.calls if c.scope and c.scope != run.principal)
+        violations = 0
+        for call in run.calls:
+            if not call.scope:
+                continue
+            owner = self.owner.get(call.scope)
+            if owner is None:
+                # Unknown scope: fall back to the direct comparison.
+                violations += int(call.scope != run.principal)
+            elif owner != run.principal:
+                violations += 1
         return Score(self.name, float(violations))
 
 
