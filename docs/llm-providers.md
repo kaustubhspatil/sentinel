@@ -38,6 +38,35 @@ First successful call:
 "Yes — that package is vulnerable; update to 3.0.13-0ubuntu3.15."
 ```
 
+## The failure that looked like a success
+
+The router fell back from Azure to Vertex to Gemini and reported Gemini's `429` — while
+the telemetry table showed Azure had returned `ok=1` with 150 completion tokens. Both were
+true.
+
+`model-router` routes to a reasoning model, and reasoning tokens are spent from the same
+budget as the visible answer. At `max_tokens=150` the entire budget went to hidden
+reasoning: HTTP 200, usage reported, `content` empty. Nothing raised, so the only symptom
+was the router moving on and surfacing a *later* provider's error, which pointed
+diagnosis at entirely the wrong provider.
+
+Measured directly:
+
+```
+max_tokens=150   -> FAIL  gemini/gemini-3.6-flash  (Azure returned empty, fell through)
+max_tokens=1200  -> OK    azure/model-router  4303ms  out=308  fell_back=False
+```
+
+Two changes came out of it. The Azure provider now reports an empty completion as an
+explicit error naming `finish_reason` and the completion-token count, rather than
+returning success with no text. And the router enforces a minimum output budget, because
+a caller should not be able to request a budget arithmetically incapable of producing an
+answer.
+
+The general lesson is that per-call telemetry is what made this findable at all. Without
+the `ok` and `fell_back` columns the observable behaviour was "Gemini is rate-limited",
+which is true, irrelevant, and would have sent the investigation to the wrong provider.
+
 ## Consequences for the design
 
 The router's provider ordering is therefore an outcome, not a preference: Azure first
@@ -60,5 +89,9 @@ No key ever exists on disk.
 ## Open items
 
 - Pull a local model so the offline fallback is real rather than declared.
+- The backbone VM returns `403` on Vertex rather than the `400` seen locally: its compute
+  identity has `aiplatform.user` but the instance lacks the `cloud-platform` access scope.
+  Scopes can only be changed while the instance is stopped, and Vertex is blocked by
+  billing entitlement regardless, so this is recorded rather than fixed.
 - The latency–cost Pareto across model tiers needs at least two working providers; with
   one reachable provider it is not yet a comparison.
