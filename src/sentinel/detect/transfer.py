@@ -23,23 +23,18 @@ threat to these numbers.
 from __future__ import annotations
 
 import json
-import math
 import random
 from dataclasses import dataclass
 from typing import Any
 
-from sentinel.detect.detectors import DetectorSuite, Run, assemble
-from sentinel.store.clickhouse import client
+from warden.detectors import DetectorSuite
+from warden.trace import Run
 
-COLUMNS = """run_id, step, agent, agent_version, tenant, tool, result_rows,
-             zone, resource, scenario, is_anomalous"""
+from sentinel.store.warden_store import ClickHouseStore
 
 
 def _load(where: str) -> list[Run]:
-    rows = client().query(
-        f"SELECT {COLUMNS} FROM agent_tool_calls WHERE {where}"
-    ).named_results()
-    return assemble(list(rows))
+    return ClickHouseStore().read(where=where)
 
 
 def load_real() -> list[Run]:
@@ -93,9 +88,9 @@ def _thresholds(suite: DetectorSuite, calib: list[Run], budget: float) -> dict[s
     """
     scores: dict[str, list[float]] = {k: [] for k in DetectorSuite.NAMES}
     for r in calib:
-        for k, v in suite.score(r).items():
-            if not math.isnan(v):
-                scores[k].append(v)
+        for k, s in suite.score(r).items():
+            if not s.suppressed:
+                scores[k].append(s.value)
     return {k: _quantile(v, 1 - budget) for k, v in scores.items()}
 
 
@@ -120,8 +115,8 @@ def evaluate_transfer(budget: float = 0.002, seed: int = 5) -> dict[str, Any]:
     cut = int(0.8 * len(shuffled))
     suite = DetectorSuite.fit(shuffled[:cut])
     thr = _thresholds(suite, shuffled[cut:], budget)
-    alerts = {k: sum(1 for r in real if suite.score(r)[k] > thr[k]) for k in thr}
-    any_alert = sum(1 for r in real if any(suite.score(r)[k] > thr[k] for k in thr))
+    alerts = {k: sum(1 for r in real if suite.score(r)[k].value > thr[k]) for k in thr}
+    any_alert = sum(1 for r in real if any(suite.score(r)[k].value > thr[k] for k in thr))
     out["cold_start_runs_synthetic_fit"] = sum(1 for r in real if suite.is_cold_start(r))
     reports.append(TransferReport(
         "synthetic_fit -> real_score", cut, len(real), alerts,
@@ -137,8 +132,8 @@ def evaluate_transfer(budget: float = 0.002, seed: int = 5) -> dict[str, Any]:
         # observed maximum on the fit half. Stated because it makes the alert rate a
         # lower bound rather than a measurement.
         t2 = _thresholds(s2, r2[:half], budget)
-        a2 = {k: sum(1 for r in r2[half:] if s2.score(r)[k] > t2[k]) for k in t2}
-        any2 = sum(1 for r in r2[half:] if any(s2.score(r)[k] > t2[k] for k in t2))
+        a2 = {k: sum(1 for r in r2[half:] if s2.score(r)[k].value > t2[k]) for k in t2}
+        any2 = sum(1 for r in r2[half:] if any(s2.score(r)[k].value > t2[k] for k in t2))
         reports.append(TransferReport(
             "real_fit -> real_score", half, len(r2) - half, a2,
             {k: round(v / max(len(r2) - half, 1), 3) for k, v in a2.items()}, any2))
@@ -147,8 +142,8 @@ def evaluate_transfer(budget: float = 0.002, seed: int = 5) -> dict[str, Any]:
     if syn_anom:
         s3 = DetectorSuite.fit(real)
         t3 = _thresholds(s3, real, budget)
-        a3 = {k: sum(1 for r in syn_anom if s3.score(r)[k] > t3[k]) for k in t3}
-        any3 = sum(1 for r in syn_anom if any(s3.score(r)[k] > t3[k] for k in t3))
+        a3 = {k: sum(1 for r in syn_anom if s3.score(r)[k].value > t3[k]) for k in t3}
+        any3 = sum(1 for r in syn_anom if any(s3.score(r)[k].value > t3[k] for k in t3))
         reports.append(TransferReport(
             "real_fit -> synthetic_anomaly_score", len(real), len(syn_anom), a3,
             {k: round(v / len(syn_anom), 3) for k, v in a3.items()}, any3))

@@ -15,8 +15,10 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
-from sentinel.detect.detectors import DetectorSuite, Run, assemble
-from sentinel.store.clickhouse import client
+from warden.detectors import DetectorSuite
+from warden.trace import Run
+
+from sentinel.store.warden_store import ClickHouseStore
 
 FPR_BUDGET = 0.01  # target false-positive rate for the SUITE, not per detector
 
@@ -47,15 +49,9 @@ class DetectorResult:
 
 
 def load_runs() -> list[Run]:
-    rows = client().query(
-        """
-        SELECT run_id, step, agent, agent_version, tenant, tool, result_rows,
-               zone, resource, scenario, is_anomalous
-        FROM agent_tool_calls
-        WHERE is_anomalous >= 0
-        """
-    ).named_results()
-    return assemble(list(rows))
+    """Labelled evaluation runs only; real traffic is excluded."""
+    store = ClickHouseStore()
+    return store.read(where="is_anomalous >= 0")
 
 
 def _quantile(values: list[float], q: float) -> float:
@@ -87,20 +83,21 @@ def evaluate(seed: int = 11, prior_strength: float | None = None) -> dict[str, A
 
     calib_scores = {k: [] for k in DetectorSuite.NAMES}
     for r in calib_set:
-        for k, v in suite.score(r).items():
-            calib_scores[k].append(v)
+        for k, s in suite.score(r).items():
+            if not s.suppressed:
+                calib_scores[k].append(s.value)
     thresholds = {k: _quantile(v, 1 - PER_DETECTOR_BUDGET) for k, v in calib_scores.items()}
 
     results: dict[str, DetectorResult] = {}
     for name in DetectorSuite.NAMES:
         thr = thresholds[name]
-        fp = sum(1 for r in test_benign if suite.score(r)[name] > thr)
+        fp = sum(1 for r in test_benign if suite.score(r)[name].value > thr)
         tp = fn = 0
         by_scenario: dict[str, list[int]] = {}
         for r in anomalous:
-            hit = suite.score(r)[name] > thr
+            hit = suite.score(r)[name].value > thr
             tp, fn = (tp + 1, fn) if hit else (tp, fn + 1)
-            slot = by_scenario.setdefault(r.scenario, [0, 0])
+            slot = by_scenario.setdefault(r.label, [0, 0])
             slot[0] += int(hit)
             slot[1] += 1
         results[name] = DetectorResult(
@@ -110,14 +107,14 @@ def evaluate(seed: int = 11, prior_strength: float | None = None) -> dict[str, A
     # Union: any detector firing. Reported separately because the suite's value is
     # coverage across failure modes, not any single detector's score.
     union_fp = sum(
-        1 for r in test_benign if any(suite.score(r)[k] > thresholds[k] for k in thresholds)
+        1 for r in test_benign if any(suite.score(r)[k].value > thresholds[k] for k in thresholds)
     )
     union_tp = 0
     union_by_scenario: dict[str, list[int]] = {}
     for r in anomalous:
-        hit = any(suite.score(r)[k] > thresholds[k] for k in thresholds)
+        hit = any(suite.score(r)[k].value > thresholds[k] for k in thresholds)
         union_tp += int(hit)
-        slot = union_by_scenario.setdefault(r.scenario, [0, 0])
+        slot = union_by_scenario.setdefault(r.label, [0, 0])
         slot[0] += int(hit)
         slot[1] += 1
 

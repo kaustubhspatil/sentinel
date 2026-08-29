@@ -15,6 +15,7 @@ dependencies = [
     "mcp>=1.2",
     "temporalio>=1.7",
     "google-auth>=2.30",
+    "warden-agents",
 ]
 
 [project.optional-dependencies]
@@ -23,6 +24,11 @@ dev = ["pytest>=8", "ruff>=0.5"]
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+# warden lives in this repo as a separate distribution; installed from the path so the
+# reference deployment always builds against the working tree rather than a release.
+[tool.uv.sources]
+warden-agents = { path = "packages/warden" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

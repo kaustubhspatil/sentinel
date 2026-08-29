@@ -16,6 +16,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      # warden is a sibling distribution in this repo, installed from the path so the
+      # reference deployment always builds against the working tree.
+      - run: pip install -e ./packages/warden
       - run: pip install -e ".[dev]"
       # Scoped to tests/ - packages/ is a separate distribution with its own job, and
       # collecting it here fails on an import the root environment does not have.

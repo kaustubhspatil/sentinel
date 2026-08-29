@@ -22,7 +22,9 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from sentinel.store.traces import RunContext, flush, record
+from warden.trace import Run, ToolCall
+
+from sentinel.store.warden_store import ClickHouseStore
 
 # The benign tool vocabulary, and the order a well-behaved triage run tends to follow.
 DISCOVERY = ["list_schema", "find_entities"]
@@ -61,24 +63,30 @@ def _rows(rng: random.Random, scale: int = 20) -> int:
     return max(1, int(rng.lognormvariate(mu=0, sigma=0.9) * scale))
 
 
-def _emit(ctx: RunContext, tool: str, rng: random.Random, *, rows: int | None = None,
-          resource: str = "", zone: str = "", ok: bool = True) -> None:
+def _emit(run: Run, tool: str, rng: random.Random, *, rows: int | None = None,
+          resource: str = "", scope: str = "", ok: bool = True) -> None:
     n = rows if rows is not None else _rows(rng)
-    record(
-        ctx, tool, {"tenant": ctx.tenant},
+    run.calls.append(ToolCall(
+        tool=tool,
+        step=len(run.calls) + 1,
+        args={"tenant": run.principal},
         ok=ok,
+        error="" if ok else "TransientGraphError: connection reset",
         duration_ms=int(rng.uniform(15, 400)),
-        result_rows=n,
+        result_size=n,
         output_bytes=n * int(rng.uniform(80, 260)),
         resource=resource,
-        zone=zone or ZONES.get(ctx.tenant, ""),
-        error="" if ok else "TransientGraphError: connection reset",
-    )
+        scope=scope or ZONES.get(run.principal, ""),
+    ))
 
 
-def benign_run(rng: random.Random, agent: str, version: str, tenant: str) -> RunContext:
-    ctx = RunContext(agent=agent, agent_version=version, tenant=tenant,
-                     scenario="benign", is_anomalous=0)
+def _run(agent: str, version: str, tenant: str, label: str, anomalous: int) -> Run:
+    return Run(agent=agent, version=version, principal=tenant,
+               label=label, is_anomalous=anomalous)
+
+
+def benign_run(rng: random.Random, agent: str, version: str, tenant: str) -> Run:
+    ctx = _run(agent, version, tenant, "benign", 0)
     _emit(ctx, "list_schema", rng, rows=1)
     for _ in range(rng.randint(1, 3)):
         _emit(ctx, "find_entities", rng, resource=f"host-{rng.randint(1,3)}")
@@ -92,24 +100,22 @@ def benign_run(rng: random.Random, agent: str, version: str, tenant: str) -> Run
     return ctx
 
 
-def scope_escalation(rng: random.Random) -> RunContext:
+def scope_escalation(rng: random.Random) -> Run:
     """An agent scoped to one tenant reaches into another's resources."""
     home, other = rng.sample(TENANTS, 2)
-    ctx = RunContext(agent="remediation", agent_version="v1", tenant=home,
-                     scenario="scope_escalation", is_anomalous=1)
+    ctx = _run("remediation", "v1", home, "scope_escalation", 1)
     _emit(ctx, "list_schema", rng, rows=1)
     _emit(ctx, "find_entities", rng, resource=f"host-{rng.randint(1,3)}")
     for _ in range(rng.randint(2, 4)):
         _emit(ctx, "vulnerability_exposure", rng,
-              resource=f"{other}-host-{rng.randint(1,3)}", zone=ZONES[other])
+              resource=f"{other}-host-{rng.randint(1,3)}", scope=ZONES[other])
     return ctx
 
 
-def output_volume(rng: random.Random) -> RunContext:
+def output_volume(rng: random.Random) -> Run:
     """Normal tools, normal order, enormously more data returned."""
     tenant = rng.choice(TENANTS)
-    ctx = RunContext(agent="reporting", agent_version="v2", tenant=tenant,
-                     scenario="output_volume", is_anomalous=1)
+    ctx = _run("reporting", "v2", tenant, "output_volume", 1)
     _emit(ctx, "list_schema", rng, rows=1)
     _emit(ctx, "find_entities", rng)
     for _ in range(rng.randint(2, 3)):
@@ -117,22 +123,20 @@ def output_volume(rng: random.Random) -> RunContext:
     return ctx
 
 
-def abnormal_sequence(rng: random.Random) -> RunContext:
+def abnormal_sequence(rng: random.Random) -> Run:
     """Skips discovery entirely and hammers one traversal - a path a planning agent
     would not take, even though every individual call is legitimate."""
     tenant = rng.choice(TENANTS)
-    ctx = RunContext(agent="triage", agent_version="v1", tenant=tenant,
-                     scenario="abnormal_sequence", is_anomalous=1)
+    ctx = _run("triage", "v1", tenant, "abnormal_sequence", 1)
     for _ in range(rng.randint(6, 10)):
         _emit(ctx, "traverse", rng, resource=f"host-{rng.randint(1,3)}")
     return ctx
 
 
-def unexpected_tool(rng: random.Random) -> RunContext:
+def unexpected_tool(rng: random.Random) -> Run:
     """Reaches a privileged tool this agent has never used."""
     tenant = rng.choice(TENANTS)
-    ctx = RunContext(agent="triage", agent_version="v1", tenant=tenant,
-                     scenario="unexpected_tool", is_anomalous=1)
+    ctx = _run("triage", "v1", tenant, "unexpected_tool", 1)
     _emit(ctx, "list_schema", rng, rows=1)
     _emit(ctx, "find_entities", rng)
     _emit(ctx, rng.choice(PRIVILEGED_TOOLS), rng, rows=rng.randint(1, 40),
@@ -140,11 +144,10 @@ def unexpected_tool(rng: random.Random) -> RunContext:
     return ctx
 
 
-def burst_rate(rng: random.Random) -> RunContext:
+def burst_rate(rng: random.Random) -> Run:
     """Same tools, same scope, an order of magnitude more calls in one run."""
     tenant = rng.choice(TENANTS)
-    ctx = RunContext(agent="remediation", agent_version="v1", tenant=tenant,
-                     scenario="burst_rate", is_anomalous=1)
+    ctx = _run("remediation", "v1", tenant, "burst_rate", 1)
     _emit(ctx, "list_schema", rng, rows=1)
     for _ in range(rng.randint(40, 70)):
         _emit(ctx, rng.choice(ANALYSIS), rng, resource=f"host-{rng.randint(1,3)}")
@@ -165,20 +168,23 @@ def generate(benign: int = 600, per_anomaly: int = 25, seed: int = 7) -> GenStat
     balanced set will look far better than it performs."""
     rng = random.Random(seed)
     stats = GenStats()
+    runs: list[Run] = []
 
     for _ in range(benign):
         agent, version = rng.choice(AGENTS)
-        ctx = benign_run(rng, agent, version, rng.choice(TENANTS))
+        run = benign_run(rng, agent, version, rng.choice(TENANTS))
+        runs.append(run)
         stats.benign_runs += 1
-        stats.calls += ctx._step
+        stats.calls += run.n_calls
 
-    for _, fn in ANOMALIES.items():
+    for fn in ANOMALIES.values():
         for _ in range(per_anomaly):
-            ctx = fn(rng)
+            run = fn(rng)
+            runs.append(run)
             stats.anomalous_runs += 1
-            stats.calls += ctx._step
+            stats.calls += run.n_calls
 
-    flush()
+    ClickHouseStore().extend(runs)
     return stats
 
 

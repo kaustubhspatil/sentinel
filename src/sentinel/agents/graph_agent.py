@@ -23,10 +23,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from warden.trace import RunRecorder
+
 from sentinel.agents import mcp_server as tools
 from sentinel.llm.base import Message
 from sentinel.llm.router import router
-from sentinel.store.traces import RunContext, flush, traced
+from sentinel.store.warden_store import ClickHouseStore
 
 MAX_STEPS = 8
 
@@ -161,7 +163,9 @@ def run(
     max_steps: int = MAX_STEPS,
     agent_version: str = "graph-agent-v1",
 ) -> AgentResult:
-    ctx = RunContext(agent="graph_agent", agent_version=agent_version, tenant=tenant)
+    # Instrumented with warden: the reference deployment consumes the extracted
+    # library rather than keeping a parallel copy of it.
+    ctx = RunRecorder("graph_agent", version=agent_version, principal=tenant)
     result = AgentResult(question=question, run_id=ctx.run_id)
 
     # Seed the schema rather than spending a turn on it. It is the same information
@@ -250,12 +254,14 @@ def run(
             if "tenant" in TENANT_SCOPED_TOOLS.get(name, ()):
                 args = {**args, "tenant": tenant}
 
-        with traced(ctx, name, args) as out:
+        with ctx.tool_call(name, args, scope=str(args.get("tenant") or tenant)) as call:
             try:
                 observation = TOOLBOX[name](**args)
                 rows = int(observation.get("count", 0)) if isinstance(observation, dict) else 0
-                out["result_rows"] = rows
-                out["resource"] = str(args.get("node_id") or args.get("host_id") or args.get("package") or "")
+                call.result_size = rows
+                call.resource = str(
+                    args.get("node_id") or args.get("host_id") or args.get("package") or ""
+                )
                 step = Step(name, args, ok="error" not in observation, result_rows=rows)
             except TypeError as exc:
                 observation = {"error": f"bad arguments: {exc}"}
@@ -269,7 +275,7 @@ def run(
     else:
         result.stopped_reason = "max_steps"
 
-    flush()
+    ClickHouseStore().append(ctx.finish())
     return result
 
 
