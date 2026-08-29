@@ -1,0 +1,15 @@
+{
+  "experiment": "adaptive prompt injection vs out-of-band action detection (AgentDojo workspace)",
+  "firm_results": {
+    "monitor_utility_cost": "zero — 15/15 benign tasks solved with the monitor attached",
+    "static_attack_success_rate": "0.0 across all six AgentDojo attack families",
+    "adaptive_attack_success_rate_observed": "0.0 within a 3-5 iteration budget on model-router"
+  },
+  "honest_reading": "A current frontier model (behind Azure model-router) resists BOTH the static AgentDojo attacks and a black-box adaptive attacker within a modest budget. The model itself is the strong defense. Consequently the detection-asymmetry comparison cannot yet be measured on this target: there are no successful attacks to score either detector on.",
+  "what_this_needs_to_become_a_measurement": [
+    "a weaker/older target model (AgentDojo supports GPT-3.5-class targets) where attacks land, OR",
+    "a much larger attacker budget and stronger jailbroken attacker model, OR",
+    "a longer-horizon multi-step injection task where the malicious action blends into normal tool patterns"
+  ],
+  "why_the_negative_result_is_still_useful": "It is a current, dated, reproducible data point that static injection benchmarks are saturated on 2026 frontier models, matching the adaptive-attack literature's warning, and it establishes the zero-utility-cost property of out-of-band monitoring cleanly."
+}
