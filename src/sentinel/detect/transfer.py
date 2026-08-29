@@ -112,6 +112,7 @@ def evaluate_transfer(budget: float = 0.002, seed: int = 5) -> dict[str, Any]:
     thr = _thresholds(suite, shuffled[cut:], budget)
     alerts = {k: sum(1 for r in real if suite.score(r)[k] > thr[k]) for k in thr}
     any_alert = sum(1 for r in real if any(suite.score(r)[k] > thr[k] for k in thr))
+    out["cold_start_runs_synthetic_fit"] = sum(1 for r in real if suite.is_cold_start(r))
     reports.append(TransferReport(
         "synthetic_fit -> real_score", cut, len(real), alerts,
         {k: round(v / len(real), 3) for k, v in alerts.items()}, any_alert))
