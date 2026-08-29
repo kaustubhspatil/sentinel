@@ -63,12 +63,14 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     """Embed a batch through Azure OpenAI."""
     endpoint = (settings.azure_openai_endpoint or "").rstrip("/")
     url = f"{endpoint}/openai/deployments/{MODEL}/embeddings"
-    # A freshly created deployment returns 404 for several minutes while it propagates
-    # across the Global tier, and rate limits appear as 429. Both are transient and the
-    # identical request succeeds shortly after, so retry rather than abandoning a
-    # half-finished index.
-    delay = 2.0
-    for attempt in range(5):
+    # A freshly created deployment returns 404 for *minutes* while it propagates, and
+    # propagation is per-caller: the same deployment served this laptop while still
+    # 404ing the backbone, and took roughly 2.5 minutes of polling there. Rate limits
+    # appear as 429. Both are transient, so the budget is deliberately generous - about
+    # four minutes - because abandoning a half-finished index is far more expensive than
+    # waiting.
+    delay = 3.0
+    for attempt in range(8):
         with httpx.Client(timeout=TIMEOUT) as c:
             r = c.post(
                 url,
@@ -76,14 +78,14 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
                 headers={"api-key": settings.azure_openai_api_key},
                 json={"input": texts},
             )
-        if r.status_code in (404, 429, 500, 502, 503, 504) and attempt < 4:
+        if r.status_code in (404, 429, 500, 502, 503, 504) and attempt < 7:
             time.sleep(delay)
-            delay *= 2
+            delay = min(delay * 1.8, 60.0)
             continue
         r.raise_for_status()
         data = r.json()["data"]
         break
-    else:  # pragma: no cover - only on five consecutive failures
+    else:  # pragma: no cover - only on eight consecutive failures
         r.raise_for_status()
         data = r.json()["data"]
     # The API may return results out of order; index is authoritative.
