@@ -10,6 +10,7 @@ Free, unauthenticated, and paginated.
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,7 +19,8 @@ import httpx
 from sentinel.config import settings
 
 NOTICES_URL = "https://ubuntu.com/security/notices.json"
-PAGE = 100
+# The API caps page size at 20 and returns 422 above it.
+PAGE = 20
 TIMEOUT = httpx.Timeout(60.0, connect=15.0)
 
 
@@ -45,6 +47,8 @@ def fetch(release: str = "noble", out_dir: Path | None = None) -> UsnFetch:
                 break
             collected.extend(batch)
             offset += PAGE
+            # ~70 pages for a release; pace them rather than hammering a free service.
+            time.sleep(0.2)
             if offset >= int(payload.get("total_results", 0)):
                 break
 
