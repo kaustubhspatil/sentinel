@@ -101,7 +101,7 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
 
         dense = DenseRetriever(VectorStore())
         retrievers.append(dense)
-        retrievers.append(HybridRetriever([dense, retrievers[0]], ))
+        retrievers.append(HybridRetriever([dense, retrievers[0]]))
     else:
         retrievers.append(HybridRetriever([retrievers[0], retrievers[1]]))
 
