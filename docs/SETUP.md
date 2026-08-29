@@ -40,7 +40,7 @@ One host, 2 vCPU / 8 GB, running the stateful services:
 |---|---|
 | Neo4j | knowledge graph |
 | ClickHouse | metrics, logs, agent tool-call traces |
-| Redpanda | event mesh (Kafka API) |
+| Redpanda | event mesh (Kafka API) — provisioned, not yet carrying traffic |
 | Temporal | durable execution for multi-step remediation |
 | PostgreSQL + pgvector | document store and embeddings |
 | Caddy | TLS termination |
