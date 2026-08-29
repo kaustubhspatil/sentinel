@@ -180,6 +180,36 @@ class VectorStore:
             self._query_cache[key] = embed_texts([query[:8000]])[0]
         return self._query_cache[key]
 
+    def warm(self, queries: list[str]) -> int:
+        """Embed many queries in as few requests as possible, filling the cache.
+
+        Per-query embedding is fine against a healthy endpoint and hopeless against one
+        that rejects nine requests in ten: 193 queries became 193 independent gambles and
+        the ablation could not finish. Batching them into one or two requests turns that
+        into one or two gambles, which the retry budget handles comfortably.
+        """
+        missing = [q for q in queries if _sha(q[:8000]) not in self._query_cache]
+        if not missing:
+            return 0
+        packed: list[list[str]] = []
+        current: list[str] = []
+        tokens = 0
+        for q in missing:
+            text = q[:8000]
+            cost = len(text) // 4 + 1
+            if current and (tokens + cost > MAX_BATCH_TOKENS or len(current) >= MAX_BATCH_DOCS):
+                packed.append(current)
+                current, tokens = [], 0
+            current.append(text)
+            tokens += cost
+        if current:
+            packed.append(current)
+
+        for chunk in packed:
+            for text, vector in zip(chunk, embed_texts(chunk), strict=True):
+                self._query_cache[_sha(text)] = vector
+        return len(missing)
+
     def search(self, query: str, k: int = 10) -> list[tuple[str, float]]:
         vector = self._embed_query(query)
         rows = self.conn.execute(

@@ -99,7 +99,10 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
     if use_dense:
         from sentinel.rag.embed import VectorStore
 
-        dense = DenseRetriever(VectorStore())
+        store = VectorStore()
+        # Embed every benchmark query up front, in as few requests as possible.
+        store.warm([q.text for q in sampled])
+        dense = DenseRetriever(store)
         retrievers.append(dense)
         retrievers.append(HybridRetriever([dense, retrievers[0]]))
     else:
