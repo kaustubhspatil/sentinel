@@ -272,6 +272,11 @@ class DetectorSuite:
 
     NAMES = ("volume", "sequence", "scope", "novel_tool", "rate")
 
+    # Agents observed during fit. An agent absent from this set has no behavioural
+    # history, which is worth exactly one alert - "a new agent is operating" - not an
+    # alert on every run it ever performs.
+    known_agents: set[str] = field(default_factory=set)
+
     @classmethod
     def fit(cls, benign_runs: list[Run], prior_strength: float = PRIOR_STRENGTH) -> DetectorSuite:
         return cls(
@@ -280,7 +285,12 @@ class DetectorSuite:
             scope=ScopeViolation().fit(benign_runs),
             novel_tool=NovelTool().fit(benign_runs),
             rate=RateBaseline().fit(benign_runs),
+            known_agents={r.agent for r in benign_runs},
         )
+
+    def is_cold_start(self, run: Run) -> bool:
+        """True when this agent has no fitted history."""
+        return run.agent not in self.known_agents
 
     def score(self, run: Run) -> dict[str, float]:
         return {
