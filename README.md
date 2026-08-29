@@ -29,6 +29,7 @@ the Results section stays empty rather than aspirational.
 | Estate + inventory load | working |
 | Version-aware CVE matching (Ubuntu USN) | working |
 | MCP tool server (7 tools) | working |
+| Durable remediation workflow (Temporal) | working |
 | Anomaly detection | not started |
 | Evaluation harness | not started |
 
@@ -157,6 +158,27 @@ itself instead of reading as "no exposure found":
 ```json
 {"error": "unknown kind 'Server'", "valid_kinds": ["Contract", "Customer", "Host", ...]}
 ```
+
+## Durability
+
+The backbone runs on preemptible capacity, so the process executing a remediation can
+vanish without warning. Verified rather than assumed — `SIGKILL` the worker while a
+workflow waits for approval:
+
+```
+stage: awaiting_approval
+31125 Killed    python -m sentinel.agents.worker
+status with no worker running: RUNNING
+stage after restart:           awaiting_approval   → approved → completed
+```
+
+The workflow survives the total loss of its process and resumes at the same step, without
+redoing the diagnosis or duplicating the ticket. Full transcript and the reasoning behind
+the activity/workflow split in [`docs/durability.md`](docs/durability.md).
+
+Autonomy is threshold-gated and the thresholds are explicit: any known-exploited CVE, or
+more than five proposed actions, requires human approval. Run against `acme` (5 actions,
+no KEV) the same workflow completes autonomously; against `globex` (10 actions) it waits.
 
 ## Repository layout
 
