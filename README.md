@@ -27,7 +27,7 @@ the Results section stays empty rather than aspirational.
 | Reference-data load into graph and columnar store | working |
 | Fleet nodes (multi-cloud, node_exporter + osquery + Alloy) | running |
 | Estate + inventory load | working |
-| Version-aware CVE matching (CPE) | **not started - see caveat below** |
+| Version-aware CVE matching (Ubuntu USN) | working |
 | MCP tool server | not started |
 | Anomaly detection | not started |
 | Evaluation harness | not started |
@@ -39,38 +39,15 @@ Currently loaded, from live feeds:
 | Neo4j | 1,685 KEV vulnerabilities · 697 ATT&CK techniques · 44 mitigations · 15 tactics · 3 hosts · 1,293 package installs · 692 packages · 2 tenants |
 | ClickHouse | 365,950 EPSS scores/day (4.6 MiB/day compressed) |
 
-### Caveat on CVE matching
+### On CVE matching
 
-The graph currently joins packages to CVEs on a hand-written product-name map, which
-answers *"is a package called openssl installed"* - **not** *"is the installed version
-vulnerable"*. On a patched Ubuntu 24.04 host those are very different questions, and the
-current exposure counts are therefore dominated by false positives.
+Package-to-CVE matching is version-aware, using Ubuntu Security Notices as the source of
+fix versions and a Debian version comparison implemented directly and unit-tested against
+dpkg's own cases. An edge means *the installed version predates the version that fixed
+this CVE on this release* - not merely that a package with a matching name exists.
 
-This is stated rather than hidden because the number is meaningless without it. Every such
-edge carries `match_method` and `confidence` so it can be filtered or re-derived, and
-version-aware matching against NVD CPE data is the next piece of work. Until then, no
-exposure figure from this graph should be treated as a finding.
-
-The split is the architecture working as designed: the graph holds the ~1.7k CVEs an
-operator reasons about, while the third of a million daily exploit-probability scores stay
-in the columnar store where a time series belongs.
-
-## Why the data is real
-
-Synthetic data makes every anomaly detector look good. This project avoids that as far as it
-can: the estate is genuinely operated, and the threat intelligence describes the actual world.
-
-| Layer | Source | Real? |
-|---|---|---|
-| Endpoint telemetry | `node_exporter` + `osquery` on a live multi-cloud fleet | yes — machines actually running |
-| Vulnerability exposure | CISA KEV + FIRST EPSS (daily) + NVD, matched to installed packages by CPE | yes |
-| Adversary model | MITRE ATT&CK Enterprise (STIX 2.1) | yes |
-| Ticketing | GitHub Issues API + webhooks | yes |
-| Incidents | Whatever actually breaks, plus a labelled red-team suite | both, labelled |
-| Anomaly ground truth | Loghub labelled log datasets + injected scenarios | yes |
-
-Anything generated is prefixed `synthetic_` and is never mixed into an evaluation set
-without being labelled as such.
+Every edge records the USN, the installed version and the fixing version, so any claim
+traces back to evidence.
 
 ## Architecture
 
@@ -104,10 +81,44 @@ alternatives that were rejected and what each decision costs.
 
 ## Results
 
-_Empty by design until measured._ This section will carry: retrieval ablation
-(vector / graph / hybrid), multi-hop answer accuracy against a naive-RAG baseline, detector
-precision–recall on labelled anomalies, LLM-judge calibration (Cohen's κ against human
-labels), and a latency–cost curve across model tiers.
+### Version-aware matching vs. a name heuristic
+
+The first thing measured, because it decides whether every downstream exposure number
+means anything. Both methods ran over the same 1,293 package installs on the same three
+hosts.
+
+| | Product-name heuristic | Version-aware (USN) |
+|---|---|---|
+| Exposure edges | 28 | 237 |
+| Distinct CVEs | 14 | 44 |
+| **KEV-listed CVEs present** | **28 claimed** | **0 actual** |
+| Evidence per edge | package name resembles a KEV product | USN id + installed version + fixing version |
+| Unparseable versions | n/a | 0 of 1,293 |
+
+The heuristic was wrong in both directions. It **invented** every one of its known-exploited
+findings — all 28 were packages whose *name* matched a KEV product while the installed
+version was patched — and it simultaneously **missed** 33 genuinely outdated packages
+carrying real CVEs, because they were not on the hand-written hint list.
+
+A tidy false-positive rate would have been the comfortable result. Reporting that the
+impressive-looking number was entirely artefact is the useful one.
+
+### Current exposure
+
+| Tenant | Host | Vulnerable installs | Distinct CVEs | KEV |
+|---|---|---|---|---|
+| Globex Financial | `sentinel-fleet-az-01` (Azure) | 27 | 44 | 0 |
+| Acme Manufacturing | `sentinel-fleet-gcp-01` (GCP) | 5 | 11 | 0 |
+
+The asymmetry is real and not a modelling artefact: the Azure marketplace image was built
+against an older package set than the GCP one, so an identically-configured host carries
+five times the exposure depending only on where it was provisioned. That is exactly the
+kind of finding an estate-wide graph surfaces and a per-host check does not.
+
+_Still to be measured:_ retrieval ablation (vector / graph / hybrid), multi-hop answer
+accuracy against a naive-RAG baseline, detector precision–recall on labelled anomalies,
+LLM-judge calibration (Cohen's κ against human labels), and a latency–cost curve across
+model tiers.
 
 ## Quickstart
 
