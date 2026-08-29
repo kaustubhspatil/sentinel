@@ -41,10 +41,6 @@ ORDER BY (purpose, provider, model, ts)
 """
 
 # Prices are USD per million tokens, correct as a snapshot and centralised so there is one
-# place to fix when they change. Free-tier usage is priced at 0 deliberately: the point of
-# the cost column is to compare what production would cost, and a free tier that later
-# becomes paid should be visible as a change here rather than an invisible surprise.
-# Prices are USD per million tokens, correct as a snapshot and centralised so there is one
 # place to fix when they change.
 #
 # Provider order here is the outcome of testing what this account can actually reach, not
