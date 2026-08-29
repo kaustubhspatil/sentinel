@@ -51,6 +51,13 @@ class Settings(BaseSettings):
     neo4j_user: str = "neo4j"
     neo4j_password: str | None = None
 
+    # Document store / embeddings
+    postgres_host: str = "localhost"
+    postgres_port: int = 5432
+    postgres_user: str = "sentinel"
+    postgres_password: str | None = None
+    postgres_db: str = "sentinel"
+
     # Columnar store
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123
