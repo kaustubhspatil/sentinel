@@ -1,0 +1,27 @@
+name: ingest-public-feeds
+
+# The daily EPSS series only has value if it is collected daily, so this runs on
+# GitHub's schedule rather than on the backbone - it keeps accumulating even when
+# the backbone is down or preempted.
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -e .
+      - name: Fetch KEV, EPSS and ATT&CK
+        run: python -m sentinel.ingest.feeds
+      - uses: actions/upload-artifact@v4
+        with:
+          name: feeds-${{ github.run_id }}
+          path: data/raw/
+          retention-days: 30
