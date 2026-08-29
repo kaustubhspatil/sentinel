@@ -34,6 +34,9 @@ the Results section stays empty rather than aspirational.
 | Behavioural anomaly detection (5 detectors) | working |
 | Evaluation harness (7 tasks, trajectory-scored) | working |
 | Adversarial suite + CI regression gate | working |
+| Behavioural monitoring library ([agentnorm](packages/agentnorm/)) | extracted, publishable |
+| RAG + retrieval ablation | not started |
+| OpenAPI → MCP connector generation | not started |
 
 Currently loaded, from live feeds:
 
