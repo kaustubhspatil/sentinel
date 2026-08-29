@@ -28,7 +28,7 @@ the Results section stays empty rather than aspirational.
 | Fleet nodes (multi-cloud, node_exporter + osquery + Alloy) | running |
 | Estate + inventory load | working |
 | Version-aware CVE matching (Ubuntu USN) | working |
-| MCP tool server | not started |
+| MCP tool server (7 tools) | working |
 | Anomaly detection | not started |
 | Evaluation harness | not started |
 
@@ -131,6 +131,32 @@ python -m sentinel.ingest.feeds
 `sentinel.ingest.feeds` needs no credentials — it pulls the public CISA KEV catalogue,
 today's EPSS scores and the MITRE ATT&CK STIX bundle. Everything else requires the setup in
 [`docs/SETUP.md`](docs/SETUP.md).
+
+## The tool surface
+
+Seven MCP tools: schema discovery, entity lookup, single-hop traversal, and four
+purposeful aggregates. There is deliberately **no `run_cypher` tool** — handing a model a
+query language costs you hallucinated labels, advisory-only tenant isolation, and
+traversals that can walk the entire graph.
+
+`blast_radius("openssl")` against the live estate:
+
+```
+host                    tenant   version               vulnerable  zone
+sentinel-fleet-az-01    globex   3.0.13-0ubuntu3.12    True        Azure canadacentral VNet
+sentinel-fleet-gcp-01   acme     3.0.13-0ubuntu3.15    False       GCP us-central1 default VPC
+```
+
+Same package, two tenants, three patch releases apart — one exposed, one not. Answering
+that requires the estate, the inventory, the security notices and the version comparison
+to all line up.
+
+Guardrails return the valid options rather than an empty result, so a wrong guess corrects
+itself instead of reading as "no exposure found":
+
+```json
+{"error": "unknown kind 'Server'", "valid_kinds": ["Contract", "Customer", "Host", ...]}
+```
 
 ## Repository layout
 
