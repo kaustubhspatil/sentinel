@@ -9,7 +9,35 @@ the one to use in a live conversation — it cannot fail on someone else's wifi.
 
 ```bash
 pip install agentnorm
+```
+
+The example script lives in the repository, not the wheel, so either clone it:
+
+```bash
+git clone https://github.com/kaustubhspatil/agentnorm && cd agentnorm
 python examples/quickstart.py
+```
+
+...or paste this, which is the same demo in twelve lines:
+
+```python
+import random
+from agentnorm import Monitor, RunRecorder
+
+def run(agent="triage", version="v1", principal="acme", tools=("search",), size=None):
+    rng = random.Random()
+    r = RunRecorder(agent, version=version, principal=principal)
+    for t in tools:
+        with r.tool_call(t, {"q": "x"}, scope=principal) as c:
+            c.result_size = size or max(1, int(rng.lognormvariate(0, .6) * 12))
+    return r.finish()
+
+monitor = Monitor.fit([run() for _ in range(300)])
+
+print("normal      ->", monitor.score(run()).explain())
+print("exfiltration->", monitor.score(
+    run(tools=("search", "export_all"), principal="globex", size=90_000)).explain())
+print("new version ->", monitor.score(run(version="v2")).explain())
 ```
 
 ```
