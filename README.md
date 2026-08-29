@@ -271,6 +271,27 @@ Autonomy is threshold-gated and the thresholds are explicit: any known-exploited
 more than five proposed actions, requires human approval. Run against `acme` (5 actions,
 no KEV) the same workflow completes autonomously; against `globex` (10 actions) it waits.
 
+## warden
+
+The validation layer has been extracted into [`packages/warden`](packages/warden/) — a
+zero-dependency library for behavioural monitoring of any agent, not just this one.
+
+Sentinel is its reference deployment: the place its numbers come from, and where it found
+a real cross-tenant disclosure in Sentinel's own agent. Most observability tooling ships
+without a live system demonstrating its own findings.
+
+```python
+from warden import RunRecorder, Monitor
+
+rec = RunRecorder(agent="triage", version="v3", principal="acme")
+with rec.tool_call("search", {"q": q}, scope="acme") as call:
+    call.result_size = len(search(q))
+
+verdict = Monitor.fit(history).score(rec.finish())
+# volume=13.40 (threshold 2.01)
+# no anomaly [cold start: no history for this agent version; uncalibrated: rate]
+```
+
 ## Repository layout
 
 ```
