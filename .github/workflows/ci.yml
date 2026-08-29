@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  sentinel:
+    name: sentinel (reference deployment)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -16,12 +17,72 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -e ".[dev]"
+      # Scoped to tests/ - packages/ is a separate distribution with its own job, and
+      # collecting it here fails on an import the root environment does not have.
       - name: Unit tests
-        run: pytest -q
+        run: pytest tests -q
       - name: Lint
         run: ruff check src tests
 
+  warden:
+    name: warden (library)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # The library claims >=3.10 support and zero dependencies; both are only true
+        # if they are tested.
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - working-directory: packages/warden
+        run: pip install -e ".[dev]"
+      - name: Unit tests
+        working-directory: packages/warden
+        run: pytest -q
+      - name: Lint
+        working-directory: packages/warden
+        run: ruff check warden tests
+      - name: Quickstart runs
+        working-directory: packages/warden
+        run: python examples/quickstart.py
+
+  zero-dependency-check:
+    name: warden imports nothing external
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # The zero-dependency claim is the library's main adoption argument, so it is
+      # enforced rather than asserted in prose.
+      - name: Assert no third-party imports
+        working-directory: packages/warden
+        run: |
+          python - <<'PY'
+          import ast, pathlib, sys
+          stdlib = set(sys.stdlib_module_names)
+          external = set()
+          for f in pathlib.Path("warden").rglob("*.py"):
+              for node in ast.walk(ast.parse(f.read_text(encoding="utf-8"))):
+                  if isinstance(node, ast.Import):
+                      external.update(a.name.split(".")[0] for a in node.names)
+                  elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+                      external.add(node.module.split(".")[0])
+          leaked = sorted(m for m in external if m not in stdlib and m != "warden")
+          if leaked:
+              raise SystemExit(f"warden gained third-party dependencies: {leaked}")
+          print("zero-dependency claim holds")
+          PY
+
   quality-gate:
+    name: evaluation regression gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,6 +93,6 @@ jobs:
       - run: pip install -e .
       # The evaluation itself runs on the backbone, which holds the graph and is
       # reachable only from the operator's IP. CI enforces the committed report's
-      # thresholds, including its age, so a stale pass cannot masquerade as a fresh one.
+      # thresholds, including its age, so a stale pass cannot masquerade as fresh.
       - name: Evaluation regression gate
         run: python -m sentinel.eval.gate
