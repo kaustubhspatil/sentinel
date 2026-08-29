@@ -41,6 +41,7 @@ TASKS_FILE = Path(__file__).resolve().parents[3] / "evals" / "tasks.yaml"
 class TaskResult:
     id: str
     passed: bool
+    errored: bool
     fact_recall: float
     fabricated: list[str]
     tool_recall: float
@@ -81,13 +82,21 @@ def run_task(task: dict[str, Any], tier: str = "small") -> TaskResult:
     tool_hits = [t for t in expected if t in called]
     tool_recall = len(tool_hits) / len(expected) if expected else 1.0
 
+    # Infrastructure failure is not model failure, and conflating them makes the suite
+    # useless for deciding anything. A provider exhausting its quota says nothing about
+    # whether the agent would have answered correctly, so errored tasks are excluded
+    # from the pass rate and reported separately. The first run of this suite scored
+    # 4/7 with two of the three failures caused by rate limits, which would have read as
+    # a 57% capability score.
+    errored = res.stopped_reason.startswith("llm_error")
+
     # A task passes only with every required fact and no fabrication. Partial credit is
     # reported but does not pass: an operator acting on a half-right answer is not
     # half-safe.
-    passed = fact_recall == 1.0 and not fabricated
+    passed = (not errored) and fact_recall == 1.0 and not fabricated
 
     return TaskResult(
-        id=task["id"], passed=passed, fact_recall=round(fact_recall, 3),
+        id=task["id"], passed=passed, errored=errored, fact_recall=round(fact_recall, 3),
         fabricated=fabricated, tool_recall=round(tool_recall, 3),
         tools_called=called, tools_expected=expected,
         malformed_calls=res.malformed_calls, premature_answers=res.premature_answers,
@@ -102,14 +111,18 @@ def run_suite(tier: str = "small", tasks_file: Path | None = None) -> dict[str, 
     results = [run_task(t, tier=tier) for t in doc["tasks"]]
 
     n = len(results)
+    scored = [r for r in results if not r.errored]
+    n_scored = len(scored) or 1
     return {
         "tier": tier,
         "tasks": n,
-        "passed": sum(r.passed for r in results),
-        "pass_rate": round(sum(r.passed for r in results) / n, 3),
-        "mean_fact_recall": round(statistics.mean(r.fact_recall for r in results), 3),
-        "tasks_with_fabrication": sum(1 for r in results if r.fabricated),
-        "mean_tool_recall": round(statistics.mean(r.tool_recall for r in results), 3),
+        "errored": sum(r.errored for r in results),
+        "scored": len(scored),
+        "passed": sum(r.passed for r in scored),
+        "pass_rate": round(sum(r.passed for r in scored) / n_scored, 3),
+        "mean_fact_recall": round(statistics.mean([r.fact_recall for r in scored] or [0]), 3),
+        "tasks_with_fabrication": sum(1 for r in scored if r.fabricated),
+        "mean_tool_recall": round(statistics.mean([r.tool_recall for r in scored] or [0]), 3),
         "total_malformed_calls": sum(r.malformed_calls for r in results),
         "total_premature_answers": sum(r.premature_answers for r in results),
         "median_latency_ms": int(statistics.median(r.latency_ms for r in results)),
@@ -127,8 +140,8 @@ if __name__ == "__main__":
     out.parent.mkdir(exist_ok=True)
     out.write_text(json.dumps(report, indent=2), encoding="utf-8")
 
-    print(f"tier={report['tier']}  passed {report['passed']}/{report['tasks']} "
-          f"({report['pass_rate']:.0%})")
+    print(f"tier={report['tier']}  passed {report['passed']}/{report['scored']} scored "
+          f"({report['pass_rate']:.0%}), {report['errored']} errored (infrastructure)")
     print(f"  mean fact recall     {report['mean_fact_recall']}")
     print(f"  tasks w/ fabrication {report['tasks_with_fabrication']}")
     print(f"  mean tool recall     {report['mean_tool_recall']}")
@@ -138,7 +151,7 @@ if __name__ == "__main__":
     print(f"  total tokens         {report['total_tokens']:,}")
     print()
     for r in report["results"]:
-        mark = "PASS" if r["passed"] else "FAIL"
+        mark = "ERR " if r["errored"] else ("PASS" if r["passed"] else "FAIL")
         extra = f" fabricated={r['fabricated']}" if r["fabricated"] else ""
         print(f"  [{mark}] {r['id']:28s} facts={r['fact_recall']:.2f} "
               f"tools={r['tools_called']}{extra}")
