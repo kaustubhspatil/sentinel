@@ -135,7 +135,8 @@ def load(path: Path | None = None) -> EstateStats:
                 MATCH (t:Site {id: $site})
                 MERGE (h:Host {id: $id})
                 SET h.hostname = $hostname, h.tenant_id = $tenant, h.address = $address,
-                    h.role = $role, h.provider = $provider, h.instance_type = $instance_type
+                    h.role = $role, h.provider = $provider, h.instance_type = $instance_type,
+                    h.os_release = $os_release
                 MERGE (t)-[:CONTAINS]->(h)
                 WITH h
                 UNWIND $zones AS zid
@@ -149,6 +150,7 @@ def load(path: Path | None = None) -> EstateStats:
                 role=host.get("role"),
                 provider=host.get("provider"),
                 instance_type=host.get("instance_type"),
+                os_release=host.get("os_release"),
                 site=host["site"],
                 zones=host.get("zones", []),
             )

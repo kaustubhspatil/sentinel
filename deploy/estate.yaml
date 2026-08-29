@@ -72,6 +72,7 @@ hosts:
     role: managed-endpoint
     provider: gcp
     instance_type: e2-micro
+    os_release: noble
 
   - id: sentinel-fleet-az-01
     hostname: sentinel-fleet-az-01
@@ -82,6 +83,7 @@ hosts:
     role: managed-endpoint
     provider: azure
     instance_type: Standard_B1s
+    os_release: noble
 
   # The backbone is modelled too. An MSP that does not monitor its own management
   # plane has a blind spot exactly where an attacker would most like one.
@@ -94,3 +96,4 @@ hosts:
     role: management-plane
     provider: gcp
     instance_type: e2-standard-2
+    os_release: noble
