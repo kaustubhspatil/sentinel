@@ -312,8 +312,14 @@ no KEV) the same workflow completes autonomously; against `globex` (10 actions) 
 
 ## agentnorm
 
-The validation layer has been extracted into [`packages/agentnorm`](packages/agentnorm/) — a
-zero-dependency library for behavioural monitoring of any agent, not just this one.
+The validation layer has been extracted into
+**[agentnorm](https://github.com/kaustubhspatil/agentnorm)** — a zero-dependency library for
+behavioural monitoring of any agent, not just this one, published at
+[pypi.org/project/agentnorm](https://pypi.org/project/agentnorm/).
+
+```bash
+pip install agentnorm
+```
 
 Sentinel is its reference deployment: the place its numbers come from, and where it found
 a real cross-tenant disclosure in Sentinel's own agent. Most observability tooling ships

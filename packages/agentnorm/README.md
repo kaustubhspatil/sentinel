@@ -1,10 +1,18 @@
 # agentnorm
 
+[![PyPI](https://img.shields.io/pypi/v/agentnorm)](https://pypi.org/project/agentnorm/)
+[![Python](https://img.shields.io/pypi/pyversions/agentnorm)](https://pypi.org/project/agentnorm/)
+[![License](https://img.shields.io/pypi/l/agentnorm)](LICENSE)
+
 **Behavioural monitoring for AI agents.** Evaluation grades what an agent *said*, offline.
 This watches how it *behaves*, at runtime, and tells you when a run does not look like the
 ones before it.
 
 Zero dependencies. No database, no framework, no context propagation.
+
+```bash
+pip install agentnorm      # zero dependencies
+```
 
 ```python
 from agentnorm import RunRecorder, Monitor
