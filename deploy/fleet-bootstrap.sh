@@ -116,13 +116,26 @@ loki.source.journal "journal" {
   }
 }
 
+// osquery splits its output: differential query results go to osqueryd.results.log,
+// while snapshot queries - deb_packages, the inventory the CVE graph joins on - go to
+// osqueryd.snapshots.log. Tailing only the first silently drops the inventory.
 local.file_match "osquery" {
-  path_targets = [{
-    __path__ = "/var/log/osquery/osqueryd.results.log",
-    job      = "osquery",
-    host     = "${HOST}",
-    tenant   = "${TENANT}",
-  }]
+  path_targets = [
+    {
+      __path__ = "/var/log/osquery/osqueryd.results.log",
+      job      = "osquery",
+      stream   = "results",
+      host     = "${HOST}",
+      tenant   = "${TENANT}",
+    },
+    {
+      __path__ = "/var/log/osquery/osqueryd.snapshots.log",
+      job      = "osquery",
+      stream   = "snapshots",
+      host     = "${HOST}",
+      tenant   = "${TENANT}",
+    },
+  ]
 }
 
 loki.source.file "osquery" {
@@ -144,6 +157,8 @@ ALLOY
 # Alloy runs as its own user, and osquery writes its result log 0600 root:root by
 # default - so the log ships nothing and fails silently. logger_mode above fixes new
 # files; this handles a log that already exists from a previous run.
+# logger_mode only applies when osquery creates the file, so existing logs keep their
+# original 0640 root:root and stay unreadable to Alloy. Fix both cases.
 sudo chmod 0644 /var/log/osquery/*.log 2>/dev/null || true
 
 sudo systemctl enable --now alloy

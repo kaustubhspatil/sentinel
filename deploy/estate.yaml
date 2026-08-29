@@ -1,0 +1,96 @@
+# The commercial and topological facts about the estate.
+#
+# These are not discoverable from a host - no agent can tell you who is billed for a
+# machine or what SLA covers it - so they are declared here and loaded into the graph
+# alongside the discovered inventory. Everything below is real: two tenants, three
+# hosts actually running, with contract terms chosen to make SLA questions non-trivial.
+#
+# Site is the physical/organisational location; NetworkZone is the security boundary.
+# They deliberately do not line up one-to-one - see ontology/ontology.md.
+
+customers:
+  - id: acme
+    name: Acme Manufacturing
+    contracts:
+      - id: acme-msa-2026
+        name: Managed Infrastructure - Standard
+        sla:
+          id: acme-sla-standard
+          name: Standard
+          # Hours to remediate a known-exploited vulnerability, by severity band.
+          patch_window_critical_hours: 72
+          patch_window_high_hours: 168
+          response_minutes: 60
+          coverage: business-hours
+        sites:
+          - id: acme-us-central
+            name: US Central (cloud)
+            kind: cloud-region
+            region: us-central1
+
+  - id: globex
+    name: Globex Financial
+    contracts:
+      - id: globex-msa-2026
+        name: Managed Infrastructure - Regulated
+        sla:
+          id: globex-sla-regulated
+          name: Regulated
+          # Tighter window: this tenant is the one where an SLA breach actually bites,
+          # which is what makes cross-tenant blast-radius questions interesting.
+          patch_window_critical_hours: 24
+          patch_window_high_hours: 72
+          response_minutes: 15
+          coverage: 24x7
+        sites:
+          - id: globex-ca-central
+            name: Canada Central (cloud)
+            kind: cloud-region
+            region: canadacentral
+
+zones:
+  - id: gcp-uscentral1-default
+    name: GCP us-central1 default VPC
+    provider: gcp
+    cidr: 10.128.0.0/9
+  - id: az-canadacentral-default
+    name: Azure canadacentral VNet
+    provider: azure
+    cidr: 10.0.0.0/16
+  - id: gcp-natortheast2-default
+    name: GCP northamerica-northeast2 default VPC
+    provider: gcp
+    cidr: 10.162.0.0/20
+
+hosts:
+  - id: sentinel-fleet-gcp-01
+    hostname: sentinel-fleet-gcp-01
+    tenant: acme
+    site: acme-us-central
+    zones: [gcp-uscentral1-default]
+    address: 34.30.135.49
+    role: managed-endpoint
+    provider: gcp
+    instance_type: e2-micro
+
+  - id: sentinel-fleet-az-01
+    hostname: sentinel-fleet-az-01
+    tenant: globex
+    site: globex-ca-central
+    zones: [az-canadacentral-default]
+    address: 20.104.106.31
+    role: managed-endpoint
+    provider: azure
+    instance_type: Standard_B1s
+
+  # The backbone is modelled too. An MSP that does not monitor its own management
+  # plane has a blind spot exactly where an attacker would most like one.
+  - id: sentinel-backbone
+    hostname: sentinel-backbone
+    tenant: internal
+    site: acme-us-central
+    zones: [gcp-natortheast2-default]
+    address: 34.130.150.94
+    role: management-plane
+    provider: gcp
+    instance_type: e2-standard-2
