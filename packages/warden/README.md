@@ -1,3 +1,69 @@
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
 # warden
 
 **Behavioural monitoring for AI agents.** Evaluation grades what an agent *said*, offline.
@@ -15,15 +81,279 @@ with rec.tool_call("search_tickets", {"q": q}, scope="acme") as call:
     rows = search(q)
     call.result_size = len(rows)
 
-monitor = Monitor.fit(history)            # past benign runs
+monitor = Monitor.fit(history)            ## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# past benign runs
 verdict = monitor.score(rec.finish())
 
 if verdict.flagged:
     print(verdict.explain())
-    # volume=7.31 (threshold 3.02) [cold start: no history for this agent version]
+    ## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
 ```
 
-## Why this exists
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# volume=7.31 (threshold 3.02) [cold start: no history for this agent version]
+```
+
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Why this exists
 
 Agents are unvalidated models running in production. We have good tooling for grading
 their outputs before release and almost none for answering the question that matters after
@@ -45,7 +375,139 @@ page someone, revoke a credential, or ignore it.
 | `novel_tool` | reaching a tool this agent has never used |
 | `rate` | an order-of-magnitude change in calls per run |
 
-## The hard part: cold start
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# The hard part: cold start
 
 Agent versions change weekly. A detector meeting an entity it has never seen is not an
 edge case — it is the **normal operating condition**, and it is where naive monitoring
@@ -81,7 +543,139 @@ explicitly:
   a triage agent making three calls and a reporting agent making forty, so warden reports
   *not yet calibrated* instead of guessing
 
-## Thresholds you can act on
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Thresholds you can act on
 
 Thresholds come from a **false-positive budget**, not from maximising a statistic. An
 operator can act on "this fires once per two hundred clean runs". Nobody can act on "this
@@ -100,7 +694,139 @@ thresholds fall back to the observed maximum and the true false-positive
 rate will exceed the budget
 ```
 
-## Design choices worth knowing
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Design choices worth knowing
 
 **The unit is a run, not a span.** Scope escalation, abnormal paths and volume anomalies
 are properties of a whole episode.
@@ -119,7 +845,139 @@ refused action.
 **Attribute names follow OpenTelemetry's GenAI semantic conventions** where they exist, so
 traces can be exported rather than trapped.
 
-## Status
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Status
 
 Early, and honest about it. The detectors are validated against five labelled attack
 families and against real agent traffic from one deployment. What is not yet true:
@@ -129,7 +987,139 @@ families and against real agent traffic from one deployment. What is not yet tru
 - real-traffic validation is one deployment and tens of runs, not thousands
 - there is no persistence layer; bring your own store
 
-## Reference deployment
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Reference deployment
 
 warden was extracted from [Sentinel](../../README.md), an agentic IT-operations platform
 running on a live multi-cloud estate. Sentinel is where these numbers come from, and where
@@ -137,6 +1127,138 @@ warden found a real cross-tenant disclosure in Sentinel's own agent — a run sc
 tenant returning another tenant's host and package data, because `tenant` was a parameter
 the model could set freely. A boundary the caller can rewrite is not a boundary.
 
-## Licence
+## Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+### Instrumenting an agent you already have
+
+Hand over the tool callables you already use; get back callables with the same signatures
+that record as a side effect. No restructuring, no context propagation.
+
+```python
+from warden import JsonlStore, Monitor, Session
+
+store = JsonlStore("history.jsonl")
+
+session = Session(agent="triage", version="v3", principal="acme",
+                  scope_of=lambda tool, args, result: args.get("tenant"))
+tools = session.wrap({"search_tickets": search_tickets, "export_all": export_all})
+
+... run the agent using `tools` exactly as before ...
+
+store.append(session.finish())
+verdict = Monitor.fit(store.read()).score(session.finish())
+```
+
+`scope_of` is what makes cross-tenant detection possible at all — without it warden can
+see that a call happened but not whose data it touched. Returning `None` means "unknown",
+which is treated as in-scope, because a false accusation of cross-tenant access is worse
+than a miss.
+
+### What that gets you
+
+From [`examples/quickstart.py`](examples/quickstart.py), fitted on 300 normal runs:
+
+```
+normal run           -> no anomaly
+
+exfiltration attempt -> scope=1.00 (threshold 0.00); novel_tool=1.00 (threshold 0.00);
+                        sequence=3.61 (threshold 0.00); volume=7.98 (threshold 2.17)
+
+new agent version    -> no anomaly [cold start: no history for this agent version;
+                                    uncalibrated: sequence, novel_tool, rate]
+```
+
+Four detectors fire on the exfiltration attempt and each one names the invariant that
+broke — wrong tenant, unfamiliar tool, unusual path, far too much data. That is the
+difference between "something is wrong" and a page an engineer can act on at 3am.
+
+The third line is the one most monitoring gets wrong: a version bump is a **change-point**,
+not an anomaly. warden says it has no history rather than alerting, and names which
+detectors are consequently unavailable.
+
+It also refuses to pretend about calibration:
+
+```
+warning: calibration set has 75 runs but a 0.0020 quantile needs at least 500;
+thresholds fall back to the observed maximum and the true false-positive rate
+will exceed the budget
+```
+
+## Persistence
+
+`Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
+`JsonlStore` is the smallest thing that solves it: append-only JSON Lines, standard
+library only. Append-only is deliberate — behavioural history is evidence, and a store
+that can be rewritten in place is worth much less during an investigation. A truncated
+final line from an interrupted write costs one run, not the file.
+
+`Store` is a protocol, so ClickHouse or Postgres is a drop-in. The reference deployment
+uses ClickHouse.
+
+# Licence
 
 MIT.

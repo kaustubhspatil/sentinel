@@ -16,13 +16,23 @@ the ones before it.
     if verdict.flagged:
         print(verdict.explain())
 
+Or instrument tools you already have, without restructuring the agent:
+
+    session = Session(agent="triage", version="v3", principal="acme")
+    tools = session.wrap({"search": search, "fetch": fetch})
+    ...
+    verdict = monitor.score(session.finish())
+
 No database, no framework, no context propagation required.
 """
 from warden.detectors import DetectorSuite
+from warden.integrations import Session, default_size_of
 from warden.monitor import Alert, Monitor, Verdict
+from warden.store import JsonlStore, Store
 from warden.trace import Run, RunRecorder, ToolCall
 
 __version__ = "0.1.0"
 __all__ = [
-    "Alert", "DetectorSuite", "Monitor", "Run", "RunRecorder", "ToolCall", "Verdict",
+    "Alert", "DetectorSuite", "JsonlStore", "Monitor", "Run", "RunRecorder", "Session",
+    "Store", "ToolCall", "Verdict", "default_size_of",
 ]
