@@ -5,8 +5,8 @@ import random
 
 import pytest
 
-from warden import Run, RunRecorder
-from warden.evaluation import evaluate, sensitivity
+from agentnorm import Run, RunRecorder
+from agentnorm.evaluation import evaluate, sensitivity
 
 
 def _run(agent="triage", version="v1", principal="acme", tools=None, sizes=None,

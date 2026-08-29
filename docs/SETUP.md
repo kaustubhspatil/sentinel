@@ -8,11 +8,11 @@ cost decision.
 
 ```bash
 python -m venv .venv
-# warden is a sibling distribution in this repo, not a release, so install it first.
+# agentnorm is a sibling distribution in this repo, not a release, so install it first.
 # pip does not read [tool.uv.sources]; uv users can skip this line.
-.venv/Scripts/pip install -e ./packages/warden
+.venv/Scripts/pip install -e ./packages/agentnorm
 .venv/Scripts/pip install -e ".[dev]"      # Windows
-# source .venv/bin/activate && pip install -e ./packages/warden && pip install -e ".[dev]"
+# source .venv/bin/activate && pip install -e ./packages/agentnorm && pip install -e ".[dev]"
 ```
 
 Verify with the credential-free path:

@@ -16,9 +16,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # warden is a sibling distribution in this repo, installed from the path so the
+      # agentnorm is a sibling distribution in this repo, installed from the path so the
       # reference deployment always builds against the working tree.
-      - run: pip install -e ./packages/warden
+      - run: pip install -e ./packages/agentnorm
       - run: pip install -e ".[dev]"
       # Scoped to tests/ - packages/ is a separate distribution with its own job, and
       # collecting it here fails on an import the root environment does not have.
@@ -27,8 +27,8 @@ jobs:
       - name: Lint
         run: ruff check src tests
 
-  warden:
-    name: warden (library)
+  agentnorm:
+    name: agentnorm (library)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -42,20 +42,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - working-directory: packages/warden
+      - working-directory: packages/agentnorm
         run: pip install -e ".[dev]"
       - name: Unit tests
-        working-directory: packages/warden
+        working-directory: packages/agentnorm
         run: pytest -q
       - name: Lint
-        working-directory: packages/warden
-        run: ruff check warden tests
+        working-directory: packages/agentnorm
+        run: ruff check agentnorm tests
       - name: Quickstart runs
-        working-directory: packages/warden
+        working-directory: packages/agentnorm
         run: python examples/quickstart.py
 
   zero-dependency-check:
-    name: warden imports nothing external
+    name: agentnorm imports nothing external
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -67,7 +67,7 @@ jobs:
       # enforced rather than asserted in prose. Lazy imports inside functions are how
       # optional adapters work and are allowed; a module-scope import is not.
       - name: Assert no third-party imports at module scope
-        working-directory: packages/warden
+        working-directory: packages/agentnorm
         run: python tools/check_zero_deps.py
 
   quality-gate:
@@ -79,9 +79,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # sentinel depends on warden, which is a sibling in this repo rather than a
+      # sentinel depends on agentnorm, which is a sibling in this repo rather than a
       # release. pip does not read [tool.uv.sources], so the path install is explicit.
-      - run: pip install -e ./packages/warden
+      - run: pip install -e ./packages/agentnorm
       - run: pip install -e .
       # The evaluation itself runs on the backbone, which holds the graph and is
       # reachable only from the operator's IP. CI enforces the committed report's

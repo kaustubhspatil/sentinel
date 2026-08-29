@@ -27,10 +27,10 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
-from warden.detectors import DetectorSuite
-from warden.trace import Run
+from agentnorm.detectors import DetectorSuite
+from agentnorm.trace import Run
 
-from sentinel.store.warden_store import ClickHouseStore
+from sentinel.store.agentnorm_store import ClickHouseStore
 
 
 def _load(where: str) -> list[Run]:

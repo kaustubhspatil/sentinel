@@ -23,9 +23,9 @@ import random
 from dataclasses import dataclass, field
 from typing import Any
 
-from warden.detectors import DetectorSuite
-from warden.monitor import Monitor
-from warden.trace import Run
+from agentnorm.detectors import DetectorSuite
+from agentnorm.monitor import Monitor
+from agentnorm.trace import Run
 
 
 @dataclass

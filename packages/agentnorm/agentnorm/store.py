@@ -21,7 +21,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
-from warden.trace import Run, ToolCall
+from agentnorm.trace import Run, ToolCall
 
 
 class Store(Protocol):

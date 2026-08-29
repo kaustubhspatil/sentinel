@@ -23,12 +23,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from warden.trace import RunRecorder
+from agentnorm.trace import RunRecorder
 
 from sentinel.agents import mcp_server as tools
 from sentinel.llm.base import Message
 from sentinel.llm.router import router
-from sentinel.store.warden_store import ClickHouseStore
+from sentinel.store.agentnorm_store import ClickHouseStore
 
 MAX_STEPS = 8
 
@@ -163,7 +163,7 @@ def run(
     max_steps: int = MAX_STEPS,
     agent_version: str = "graph-agent-v1",
 ) -> AgentResult:
-    # Instrumented with warden: the reference deployment consumes the extracted
+    # Instrumented with agentnorm: the reference deployment consumes the extracted
     # library rather than keeping a parallel copy of it.
     ctx = RunRecorder("graph_agent", version=agent_version, principal=tenant)
     result = AgentResult(question=question, run_id=ctx.run_id)

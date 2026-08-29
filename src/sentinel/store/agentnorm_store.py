@@ -1,6 +1,6 @@
-"""ClickHouse implementation of warden's `Store` protocol.
+"""ClickHouse implementation of agentnorm's `Store` protocol.
 
-warden ships a JSONL store so it works with no infrastructure. This is the other end of
+agentnorm ships a JSONL store so it works with no infrastructure. This is the other end of
 that spectrum: the same interface backed by a columnar store, which is what the reference
 deployment actually uses.
 
@@ -8,10 +8,10 @@ Having both is the point of making `Store` a protocol. The library stays adoptab
 lines, and a deployment that outgrows a file swaps the implementation without touching a
 detector.
 
-The table predates warden, so this adapter maps between the two vocabularies rather than
+The table predates agentnorm, so this adapter maps between the two vocabularies rather than
 migrating the schema:
 
-    agent_tool_calls          warden
+    agent_tool_calls          agentnorm
     ------------------        ----------------
     tenant                    Run.principal
     zone                      ToolCall.scope
@@ -29,7 +29,7 @@ from collections import defaultdict
 from datetime import UTC, datetime
 from typing import Any
 
-from warden.trace import Run, ToolCall
+from agentnorm.trace import Run, ToolCall
 
 from sentinel.store.clickhouse import client
 
@@ -47,7 +47,7 @@ READ_COLUMNS = """ts, run_id, step, agent, agent_version, actor_kind, tenant, to
 
 
 class ClickHouseStore:
-    """Append-only run history in ClickHouse, satisfying `warden.Store`."""
+    """Append-only run history in ClickHouse, satisfying `agentnorm.Store`."""
 
     def append(self, run: Run) -> None:
         self.extend([run])

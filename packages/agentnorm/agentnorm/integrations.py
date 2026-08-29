@@ -22,7 +22,7 @@ detection is only as good as this number, so an agent returning a custom envelop
 supply its own.
 
 `scope_of` - which principal does this call's data belong to? Without it, scope violation
-cannot be detected at all: warden can see that a call happened but not whose data it
+cannot be detected at all: agentnorm can see that a call happened but not whose data it
 touched. Returning None means "unknown", which is treated as in-scope rather than as a
 violation, because a false accusation of cross-tenant access is worse than a miss.
 """
@@ -31,7 +31,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sized
 from typing import Any
 
-from warden.trace import Run, RunRecorder
+from agentnorm.trace import Run, RunRecorder
 
 SizeOf = Callable[[str, dict[str, Any], Any], int]
 ScopeOf = Callable[[str, dict[str, Any], Any], str | None]

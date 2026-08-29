@@ -131,17 +131,17 @@ these five families, and its behaviour does not depend on hand-picked constants.
 statement is evidence about a genuinely novel attack, and the first real incident will not
 resemble any of the five.
 
-The tooling is in [`warden.evaluation`](../packages/warden/warden/evaluation.py) so any
+The tooling is in [`agentnorm.evaluation`](../packages/agentnorm/agentnorm/evaluation.py) so any
 deployment with labelled runs can re-run this against its own data rather than inheriting
 these numbers.
 
 ## What extracting the library found
 
-The detectors were extracted into [`warden`](../packages/warden/) and the deployment
+The detectors were extracted into [`agentnorm`](../packages/agentnorm/) and the deployment
 migrated onto it. Two results broke immediately, and both were library bugs rather than
 migration mistakes — neither was visible against generated data.
 
-**Scope ownership was assumed rather than learned.** warden compared a call's scope to the
+**Scope ownership was assumed rather than learned.** agentnorm compared a call's scope to the
 run's principal as strings, which is correct only when a scope is a copy of the
 principal's name. Here scopes are network-zone ids, so *every benign call* looked like a
 violation, the threshold calibrated away, and the detector then caught **0 of 40** real

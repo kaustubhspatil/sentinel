@@ -151,7 +151,7 @@ generated, so they are separable by construction. The honest reading is "no scen
 invisible to the suite", which would have exposed a blind spot had one existed, and
 nothing more.
 
-**Extracting the library found two more bugs.** Migrating this deployment onto `warden`
+**Extracting the library found two more bugs.** Migrating this deployment onto `agentnorm`
 broke scope detection entirely (40/40 → 0/40: scope ids are opaque, not copies of the
 principal's name, so every benign call read as a violation) and made sequence surprisal
 alert on 100% of benign runs from a new agent version. Both were library bugs invisible
@@ -277,9 +277,9 @@ Autonomy is threshold-gated and the thresholds are explicit: any known-exploited
 more than five proposed actions, requires human approval. Run against `acme` (5 actions,
 no KEV) the same workflow completes autonomously; against `globex` (10 actions) it waits.
 
-## warden
+## agentnorm
 
-The validation layer has been extracted into [`packages/warden`](packages/warden/) — a
+The validation layer has been extracted into [`packages/agentnorm`](packages/agentnorm/) — a
 zero-dependency library for behavioural monitoring of any agent, not just this one.
 
 Sentinel is its reference deployment: the place its numbers come from, and where it found
@@ -287,7 +287,7 @@ a real cross-tenant disclosure in Sentinel's own agent. Most observability tooli
 without a live system demonstrating its own findings.
 
 ```python
-from warden import RunRecorder, Monitor
+from agentnorm import RunRecorder, Monitor
 
 rec = RunRecorder(agent="triage", version="v3", principal="acme")
 with rec.tool_call("search", {"q": q}, scope="acme") as call:
