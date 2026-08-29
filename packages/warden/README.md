@@ -218,6 +218,27 @@ refused action.
 **Attribute names follow OpenTelemetry's GenAI semantic conventions** where they exist, so
 traces can be exported rather than trapped.
 
+## Measuring your own detectors
+
+`warden.evaluation` scores a suite against your labelled runs and sweeps the settings that
+were chosen by judgement rather than derived:
+
+```python
+from warden.evaluation import sensitivity, format_report
+
+print(format_report(sensitivity(benign_runs, labelled_attacks)))
+```
+
+Run against the reference deployment's 4,000 benign and 200 labelled anomalous runs, recall
+was **1.000 at every setting** — across a 64-fold range of prior strength, a 10-fold range
+of false-positive budget, and three calibration splits. No hand-picked constant is
+load-bearing, and the false-positive rate tracks the budget while staying below it, so the
+per-detector budget division is conservative rather than optimistic.
+
+That result cuts both ways, and the second half matters more. Recall that cannot be moved
+by any setting also means the generated attacks sit nowhere near the decision boundary: the
+test is easy, which is evidence for the ceiling caveat below rather than against it.
+
 ## Status
 
 Early, and honest about it. The detectors are validated against five labelled attack
