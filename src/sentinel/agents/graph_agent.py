@@ -72,6 +72,19 @@ Rules:
 - Prefer few, well-chosen calls over many."""
 
 
+# A single worked example. Added after observing the model emit well-formed JSON that
+# refused the task without calling anything - "unable to determine ... the query did not
+# return results", having run no query at all. Describing the protocol was not enough;
+# showing one turn of it is what made the model use it.
+FEWSHOT = [
+    Message("user", "How many hosts does tenant acme have?"),
+    Message("assistant", '{"tool": "find_entities", "args": {"kind": "Host", "tenant": "acme"}}'),
+    Message("user", 'Tool result:
+{"kind": "Host", "count": 1, "results": [{"id": "example-host-01"}]}'),
+    Message("assistant", '{"answer": "Tenant acme has 1 host: example-host-01.", "citations": ["example-host-01"]}'),
+]
+
+
 @dataclass
 class Step:
     tool: str
@@ -141,7 +154,19 @@ def run(
 ) -> AgentResult:
     ctx = RunContext(agent="graph_agent", agent_version=agent_version, tenant=tenant)
     result = AgentResult(question=question, run_id=ctx.run_id)
-    history: list[Message] = [Message("system", SYSTEM), Message("user", question)]
+
+    # Seed the schema rather than spending a turn on it. It is the same information
+    # list_schema would return, it is needed for almost every question, and fetching it
+    # up front removes one round trip from every run.
+    schema = json.dumps(TOOLBOX["list_schema"](), default=str)[:1500]
+    history: list[Message] = [
+        Message("system", SYSTEM),
+        *FEWSHOT,
+        Message("user", f"Graph schema:
+{schema}
+
+Question: {question}"),
+    ]
 
     for _ in range(max_steps):
         resp = router.complete(
