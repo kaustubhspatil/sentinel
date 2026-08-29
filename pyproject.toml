@@ -9,6 +9,8 @@ dependencies = [
     "pydantic-settings>=2.3",
     "python-dotenv>=1.0",
     "structlog>=24.1",
+    "neo4j>=5.23",
+    "clickhouse-connect>=0.7",
 ]
 
 [project.optional-dependencies]
