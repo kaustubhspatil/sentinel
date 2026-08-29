@@ -79,8 +79,7 @@ Rules:
 FEWSHOT = [
     Message("user", "How many hosts does tenant acme have?"),
     Message("assistant", '{"tool": "find_entities", "args": {"kind": "Host", "tenant": "acme"}}'),
-    Message("user", 'Tool result:
-{"kind": "Host", "count": 1, "results": [{"id": "example-host-01"}]}'),
+    Message("user", 'Tool result:\n{"kind": "Host", "count": 1, "results": [{"id": "example-host-01"}]}'),
     Message("assistant", '{"answer": "Tenant acme has 1 host: example-host-01.", "citations": ["example-host-01"]}'),
 ]
 
@@ -162,10 +161,7 @@ def run(
     history: list[Message] = [
         Message("system", SYSTEM),
         *FEWSHOT,
-        Message("user", f"Graph schema:
-{schema}
-
-Question: {question}"),
+        Message("user", f"Graph schema:\n{schema}\n\nQuestion: {question}"),
     ]
 
     for _ in range(max_steps):
