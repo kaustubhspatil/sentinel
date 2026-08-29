@@ -124,6 +124,16 @@ class RunRecorder:
                        actor_kind=actor_kind)
         self._step = 0
 
+    @property
+    def run_id(self) -> str:
+        """The id of the run being recorded.
+
+        Exposed on the recorder as well as the run because callers routinely need it
+        before the run is finished - to correlate a model call, a log line or a trace
+        span with the run it belongs to.
+        """
+        return self.run.run_id
+
     def start_call(
         self, tool: str, args: dict[str, Any] | None = None, *, scope: str = ""
     ) -> ToolCall:

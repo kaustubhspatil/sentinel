@@ -199,3 +199,12 @@ def test_sequence_still_scores_a_known_agent():
     suite = DetectorSuite.fit(benign_population())
     score = suite.score(make_run())["sequence"]
     assert not score.suppressed
+
+
+def test_run_id_available_before_finish():
+    """Callers need the id mid-run, to correlate model calls and log lines with it."""
+    rec = RunRecorder("a", version="v1")
+    assert rec.run_id
+    with rec.tool_call("t") as c:
+        c.result_size = 1
+    assert rec.finish().run_id == rec.run_id
