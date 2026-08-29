@@ -23,7 +23,8 @@ the Results section stays empty rather than aspirational.
 |---|---|
 | Public threat-intel ingestion (KEV / EPSS / ATT&CK) | working |
 | Ontology and design rationale | drafted |
-| Backbone host (Neo4j, ClickHouse, Redpanda, Temporal, Postgres) | running |
+| Backbone host (Neo4j, ClickHouse, Temporal, Postgres) | running |
+| Event mesh (Redpanda) | provisioned, **not yet used** |
 | Reference-data load into graph and columnar store | working |
 | Fleet nodes (multi-cloud, node_exporter + osquery + Alloy) | running |
 | Estate + inventory load | working |
@@ -54,19 +55,29 @@ traces back to evidence.
 ## Architecture
 
 ```
-  fleet hosts ──▶ event stream ──▶ columnar store        (volume: metrics, logs, tool calls)
-       │                              │
-       └──────────▶ entity resolution ┴──▶ knowledge graph   (meaning: estate + agent behaviour)
-                                              │
-                        ┌─────────────────────┴─────────────────────┐
-                        ▼                                           ▼
-                  MCP tool server ──▶ agents                 detection layer
-                        │              │                    (baselines, sequence
-                        │              ▼                     surprisal, scope
-                        │        durable workflows            escalation)
-                        │              │
-                        └──────────────┴──▶ evaluation harness ──▶ CI gate
+  fleet hosts ──▶ osquery snapshots ──▶ inventory loader ──▶ knowledge graph
+       │                                                          │  (meaning)
+       └──▶ node_exporter ──▶ Grafana Cloud                        │
+                                                                   │
+  public feeds (KEV/EPSS/ATT&CK/USN) ──▶ ClickHouse (volume) ──────┤
+                                                                   │
+                        ┌──────────────────────────────────────────┘
+                        ▼                                    ▼
+                  MCP tool server ──▶ agents          detection layer
+                        │              │             (baselines, sequence
+                        │              ▼              surprisal, scope)
+                        │        durable workflows          ▲
+                        │              │                    │
+                        └── traces ────┴────────────────────┘
+                                       │
+                                       └──▶ evaluation harness ──▶ CI gate
 ```
+
+**What is not here yet:** Redpanda is provisioned on the backbone but carries no topics and
+has no producer — inventory currently reaches the loader by collection, not by an event
+stream. It is listed below as provisioned rather than working, because an architecture
+diagram that shows a component the system does not use is the fastest way to lose a
+reader's trust in the parts that are real.
 
 Two design commitments drive everything else:
 
