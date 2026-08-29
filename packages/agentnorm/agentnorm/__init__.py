@@ -25,6 +25,7 @@ Or instrument tools you already have, without restructuring the agent:
 
 No database, no framework, no context propagation required.
 """
+from agentnorm.audit import AuditChain, AuditLog, verify_chain
 from agentnorm.detectors import DetectorSuite
 from agentnorm.integrations import Session, default_size_of
 from agentnorm.monitor import Alert, Monitor, Verdict
@@ -33,6 +34,7 @@ from agentnorm.trace import Run, RunRecorder, ToolCall
 
 __version__ = "0.1.0"
 __all__ = [
-    "Alert", "DetectorSuite", "JsonlStore", "Monitor", "Run", "RunRecorder", "Session",
-    "Store", "ToolCall", "Verdict", "default_size_of",
+    "Alert", "AuditChain", "AuditLog", "DetectorSuite", "JsonlStore", "Monitor", "Run",
+    "RunRecorder", "Session", "Store", "ToolCall", "Verdict", "default_size_of",
+    "verify_chain",
 ]
