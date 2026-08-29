@@ -31,7 +31,7 @@ the Results section stays empty rather than aspirational.
 | MCP tool server (7 tools) | working |
 | Durable remediation workflow (Temporal) | working |
 | Behavioural anomaly detection (5 detectors) | working |
-| Evaluation harness | not started |
+| Evaluation harness (7 tasks, trajectory-scored) | working |
 
 Currently loaded, from live feeds:
 
@@ -144,6 +144,29 @@ detector initially caught 1 of 25 escalations because it tested agent *familiari
 zone rather than scope consistency within a run, and the suite's false-positive rate was
 5.8% against a "1%" budget because five detectors at 1% each union to ~5%. Both are
 written up in [`docs/detection.md`](docs/detection.md).
+
+### Agent evaluation
+
+Seven tasks over the live estate, scored on trajectories. Baseline on `azure/model-router`:
+
+```
+passed 4/7 (57%), 0 infrastructure errors
+mean fact recall 0.786 · fabrications 1 · tool recall 0.714
+malformed calls 0 · premature answers 0 · median latency 13.0s
+```
+
+The headline failure is reproducible and is the reason the harness exists. Asked which
+tenant has more outdated packages, the agent answered:
+
+> "Globex has more outdated packages: **32** compared with Acme's 5."
+
+Fluent, confident, right about the tenant and the SLA — and 32 is invented. Ground truth is
+27; the agent summed both tenants (27 + 5) and attributed the total to one. Nothing in the
+answer signals it, and an LLM judge scoring "is this a good answer" would likely pass it.
+It is caught only by exact-matching verifiable facts against the graph.
+
+Details, and the two bugs the harness found in the agent and the router, in
+[`docs/evaluation.md`](docs/evaluation.md).
 
 _Still to be measured:_ retrieval ablation (vector / graph / hybrid), multi-hop answer
 accuracy against a naive-RAG baseline, detector precision–recall on labelled anomalies,
