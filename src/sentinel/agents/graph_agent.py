@@ -19,8 +19,9 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 from sentinel.agents import mcp_server as tools
 from sentinel.llm.base import Message
@@ -129,7 +130,7 @@ def _extract_json(text: str) -> dict | None:
     as a malformed call so the model's instruction-following is measured, not hidden.
     """
     text = text.strip()
-    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
+    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.DOTALL)
     if fence:
         text = fence.group(1).strip()
     try:

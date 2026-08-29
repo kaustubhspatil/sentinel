@@ -38,8 +38,9 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
 
 # Prior strength for the volume baseline: how many pseudo-observations of the population
 # mean each (agent, tool) pair starts with. Higher means slower to trust a specific pair.
@@ -96,11 +97,11 @@ class VolumeBaseline:
         self.pop_var = 1.0
         self.params: dict[tuple[str, str], tuple[float, float]] = {}
 
-    def fit(self, runs: list[Run]) -> "VolumeBaseline":
+    def fit(self, runs: list[Run]) -> VolumeBaseline:
         obs: dict[tuple[str, str], list[float]] = defaultdict(list)
         everything: list[float] = []
         for run in runs:
-            for tool, n in zip(run.tools, run.rows):
+            for tool, n in zip(run.tools, run.rows, strict=True):
                 v = math.log1p(max(0, n))
                 obs[(run.agent, tool)].append(v)
                 everything.append(v)
@@ -129,7 +130,7 @@ class VolumeBaseline:
     def score(self, run: Run) -> float:
         """Max absolute z-score across the run's calls, in log space."""
         worst = 0.0
-        for tool, n in zip(run.tools, run.rows):
+        for tool, n in zip(run.tools, run.rows, strict=True):
             mean, var = self.params.get(
                 (run.agent, tool), (self.pop_mean, self.pop_var)
             )
@@ -149,11 +150,11 @@ class SequenceModel:
         self.context: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         self.vocab: dict[str, set[str]] = defaultdict(set)
 
-    def fit(self, runs: list[Run]) -> "SequenceModel":
+    def fit(self, runs: list[Run]) -> SequenceModel:
         for run in runs:
             seq = ["<start>"] + run.tools + ["<end>"]
             self.vocab[run.agent].update(seq)
-            for a, b in zip(seq, seq[1:]):
+            for a, b in zip(seq, seq[1:], strict=False):
                 self.counts[run.agent][(a, b)] += 1
                 self.context[run.agent][a] += 1
         return self
@@ -169,7 +170,7 @@ class SequenceModel:
         vocab = max(len(self.vocab.get(agent, ())), 1)
         seq = ["<start>"] + run.tools + ["<end>"]
         total = 0.0
-        for a, b in zip(seq, seq[1:]):
+        for a, b in zip(seq, seq[1:], strict=False):
             num = self.counts[agent].get((a, b), 0.0) + self.alpha
             den = self.context[agent].get(a, 0.0) + self.alpha * vocab
             total += -math.log(num / den)
@@ -195,7 +196,7 @@ class ScopeViolation:
     def __init__(self) -> None:
         self.zone_owner: dict[str, str] = {}
 
-    def fit(self, runs: list[Run]) -> "ScopeViolation":
+    def fit(self, runs: list[Run]) -> ScopeViolation:
         tally: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for run in runs:
             for z in run.zones:
@@ -226,7 +227,7 @@ class NovelTool:
     def __init__(self) -> None:
         self.seen: dict[str, set[str]] = defaultdict(set)
 
-    def fit(self, runs: list[Run]) -> "NovelTool":
+    def fit(self, runs: list[Run]) -> NovelTool:
         for run in runs:
             self.seen[run.agent].update(run.tools)
         return self
@@ -242,7 +243,7 @@ class RateBaseline:
         self.stats: dict[str, tuple[float, float]] = {}
         self.fallback = (1.0, 1.0)
 
-    def fit(self, runs: list[Run]) -> "RateBaseline":
+    def fit(self, runs: list[Run]) -> RateBaseline:
         per_agent: dict[str, list[float]] = defaultdict(list)
         for run in runs:
             per_agent[run.agent].append(math.log1p(run.n_calls))
@@ -272,7 +273,7 @@ class DetectorSuite:
     NAMES = ("volume", "sequence", "scope", "novel_tool", "rate")
 
     @classmethod
-    def fit(cls, benign_runs: list[Run], prior_strength: float = PRIOR_STRENGTH) -> "DetectorSuite":
+    def fit(cls, benign_runs: list[Run], prior_strength: float = PRIOR_STRENGTH) -> DetectorSuite:
         return cls(
             volume=VolumeBaseline(prior_strength).fit(benign_runs),
             sequence=SequenceModel().fit(benign_runs),

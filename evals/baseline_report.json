@@ -1,0 +1,218 @@
+{
+  "tier": "small",
+  "tasks": 7,
+  "errored": 0,
+  "scored": 7,
+  "passed": 4,
+  "pass_rate": 0.571,
+  "mean_fact_recall": 0.786,
+  "tasks_with_fabrication": 1,
+  "mean_tool_recall": 0.714,
+  "total_malformed_calls": 0,
+  "total_premature_answers": 0,
+  "median_latency_ms": 13048,
+  "total_tokens": 51958,
+  "results": [
+    {
+      "id": "tenant_exposure_comparison",
+      "passed": false,
+      "errored": false,
+      "fact_recall": 0.667,
+      "fabricated": [
+        "32"
+      ],
+      "tool_recall": 1.0,
+      "tools_called": [
+        "find_entities",
+        "vulnerability_exposure",
+        "vulnerability_exposure",
+        "vulnerability_exposure",
+        "sla_status"
+      ],
+      "tools_expected": [
+        "vulnerability_exposure",
+        "sla_status"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 6,
+      "latency_ms": 24480,
+      "input_tokens": 24272,
+      "output_tokens": 634,
+      "answer": "Globex has more outdated packages: 32 compared with Acme\u2019s 5. Globex\u2019s SLA specifies a 24-hour patch window.",
+      "citations": [
+        "sentinel-fleet-az-01",
+        "sentinel-fleet-gcp-01"
+      ],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "sla_window_acme",
+      "passed": true,
+      "errored": false,
+      "fact_recall": 1.0,
+      "fabricated": [],
+      "tool_recall": 0.0,
+      "tools_called": [
+        "find_entities",
+        "traverse",
+        "traverse",
+        "traverse",
+        "find_entities"
+      ],
+      "tools_expected": [
+        "sla_status"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 6,
+      "latency_ms": 79030,
+      "input_tokens": 6770,
+      "output_tokens": 388,
+      "answer": "Acme Manufacturing's critical patch window is 72 hours.",
+      "citations": [
+        "acme-sla-standard",
+        "acme-msa-2026",
+        "acme"
+      ],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "openssl_blast_radius",
+      "passed": false,
+      "errored": false,
+      "fact_recall": 0.333,
+      "fabricated": [],
+      "tool_recall": 0.0,
+      "tools_called": [
+        "find_entities",
+        "traverse",
+        "vulnerability_exposure"
+      ],
+      "tools_expected": [
+        "blast_radius"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 4,
+      "latency_ms": 81989,
+      "input_tokens": 5405,
+      "output_tokens": 713,
+      "answer": "Host sentinel-fleet-gcp-01 runs openssl version 3.0.13-0ubuntu3.15. It is not reported as vulnerable in the available vulnerability exposure results; those results list vulnerabilities for other packages, not openssl.",
+      "citations": [
+        "sentinel-fleet-gcp-01",
+        "sentinel-fleet-gcp-01:openssl:3.0.13-0ubuntu3.15"
+      ],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "kev_presence",
+      "passed": true,
+      "errored": false,
+      "fact_recall": 1.0,
+      "fabricated": [],
+      "tool_recall": 1.0,
+      "tools_called": [
+        "vulnerability_exposure"
+      ],
+      "tools_expected": [
+        "vulnerability_exposure"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 2,
+      "latency_ms": 6381,
+      "input_tokens": 1736,
+      "output_tokens": 173,
+      "answer": "No. The vulnerability exposure query found 0 CISA known-exploited vulnerabilities currently present on the estate.",
+      "citations": [],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "worst_package",
+      "passed": true,
+      "errored": false,
+      "fact_recall": 1.0,
+      "fabricated": [],
+      "tool_recall": 1.0,
+      "tools_called": [
+        "find_entities",
+        "vulnerability_exposure"
+      ],
+      "tools_expected": [
+        "vulnerability_exposure"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 3,
+      "latency_ms": 13048,
+      "input_tokens": 4497,
+      "output_tokens": 604,
+      "answer": "There is a tie: libssl3t64 and openssl each account for 10 CVEs on sentinel-fleet-az-01, via USN-8678-1. Therefore, no single package leads.",
+      "citations": [
+        "sentinel-fleet-az-01",
+        "USN-8678-1",
+        "CVE-2026-63076",
+        "CVE-2026-54874",
+        "CVE-2026-63075",
+        "CVE-2026-14456",
+        "CVE-2026-18798",
+        "CVE-2026-14457",
+        "CVE-2026-75803",
+        "CVE-2026-63073"
+      ],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "attack_context_lookup",
+      "passed": true,
+      "errored": false,
+      "fact_recall": 1.0,
+      "fabricated": [],
+      "tool_recall": 1.0,
+      "tools_called": [
+        "attack_context"
+      ],
+      "tools_expected": [
+        "attack_context"
+      ],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 2,
+      "latency_ms": 6477,
+      "input_tokens": 2324,
+      "output_tokens": 220,
+      "answer": "ATT&CK technique T1078.004 is Cloud Accounts. It serves the tactics Initial Access, Privilege Escalation, Stealth, and Persistence.",
+      "citations": [
+        "T1078.004"
+      ],
+      "stopped_reason": "answered"
+    },
+    {
+      "id": "unanswerable_by_design",
+      "passed": false,
+      "errored": false,
+      "fact_recall": 0.5,
+      "fabricated": [],
+      "tool_recall": 1.0,
+      "tools_called": [
+        "find_entities",
+        "traverse",
+        "find_entities"
+      ],
+      "tools_expected": [],
+      "malformed_calls": 0,
+      "premature_answers": 0,
+      "llm_calls": 4,
+      "latency_ms": 10445,
+      "input_tokens": 3957,
+      "output_tokens": 265,
+      "answer": "The annual contract value for Globex Financial is not available in the graph data provided.",
+      "citations": [
+        "globex",
+        "globex-msa-2026"
+      ],
+      "stopped_reason": "answered"
+    }
+  ]
+}
