@@ -1,0 +1,130 @@
+# Sentinel backbone.
+#
+# Every port binds to 127.0.0.1 deliberately: nothing here is reachable from the
+# internet, and access is over an SSH tunnel. The host runs on preemptible capacity,
+# so all state lives under /srv/sentinel on the persistent disk - a preemption is a
+# restart, never a rebuild.
+#
+# Memory is the binding constraint (8 GB box), so each service is explicitly capped
+# rather than left to discover the limit by being OOM-killed.
+
+name: sentinel
+
+services:
+  neo4j:
+    image: neo4j:5.26-community
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD}
+      NEO4J_server_memory_heap_initial__size: 512m
+      NEO4J_server_memory_heap_max__size: 1G
+      NEO4J_server_memory_pagecache_size: 512m
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "127.0.0.1:7474:7474"   # browser
+      - "127.0.0.1:7687:7687"   # bolt
+    volumes:
+      - /srv/sentinel/neo4j/data:/data
+      - /srv/sentinel/neo4j/logs:/logs
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    mem_limit: 2g
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8-alpine
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_USER: sentinel
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      CLICKHOUSE_DB: sentinel
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    ports:
+      - "127.0.0.1:8123:8123"   # http
+      - "127.0.0.1:9000:9000"   # native
+    volumes:
+      - /srv/sentinel/clickhouse/data:/var/lib/clickhouse
+    ulimits:
+      nofile: { soft: 262144, hard: 262144 }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8123/ping >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    mem_limit: 1500m
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    restart: unless-stopped
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 900M
+      - --overprovisioned
+      - --node-id 0
+      - --check=false
+      - --kafka-addr internal://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:9092
+    ports:
+      - "127.0.0.1:9092:9092"
+      - "127.0.0.1:9644:9644"   # admin api
+    volumes:
+      - /srv/sentinel/redpanda:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    mem_limit: 1200m
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sentinel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sentinel
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /srv/sentinel/postgres:/var/lib/postgresql/data
+      - ./init-temporal-db.sql:/docker-entrypoint-initdb.d/10-temporal.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentinel -d sentinel"]
+      interval: 20s
+      timeout: 5s
+      retries: 8
+    mem_limit: 768m
+
+  temporal:
+    image: temporalio/auto-setup:1.25.2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: sentinel
+      POSTGRES_PWD: ${POSTGRES_PASSWORD}
+      POSTGRES_SEEDS: postgres
+      DBNAME: temporal
+      VISIBILITY_DBNAME: temporal_visibility
+    ports:
+      - "127.0.0.1:7233:7233"
+    mem_limit: 768m
+
+  temporal-ui:
+    image: temporalio/ui:2.31.2
+    restart: unless-stopped
+    depends_on: [temporal]
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+    ports:
+      - "127.0.0.1:8088:8080"
+    mem_limit: 256m

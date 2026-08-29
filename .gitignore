@@ -16,3 +16,4 @@ secrets/
 *.env.txt
 msp.env*
 docs/_private/
+deploy/.env
