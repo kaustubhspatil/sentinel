@@ -83,7 +83,7 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
     for q in queries:
         by_source.setdefault(q.source, []).append(q)
     sampled: list[Query] = []
-    for source, qs in by_source.items():
+    for qs in by_source.values():
         sampled.extend(qs[:limit_per_source])
 
     doc_ids = {d.doc_id for d in docs}

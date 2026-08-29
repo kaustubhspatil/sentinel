@@ -12,6 +12,7 @@ ablation you run once, believe, and never check.
 from __future__ import annotations
 
 import hashlib
+import time
 from dataclasses import dataclass
 
 import httpx
@@ -62,13 +63,27 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     """Embed a batch through Azure OpenAI."""
     endpoint = (settings.azure_openai_endpoint or "").rstrip("/")
     url = f"{endpoint}/openai/deployments/{MODEL}/embeddings"
-    with httpx.Client(timeout=TIMEOUT) as c:
-        r = c.post(
-            url,
-            params={"api-version": "2024-10-21"},
-            headers={"api-key": settings.azure_openai_api_key},
-            json={"input": texts},
-        )
+    # A freshly created deployment returns 404 for several minutes while it propagates
+    # across the Global tier, and rate limits appear as 429. Both are transient and the
+    # identical request succeeds shortly after, so retry rather than abandoning a
+    # half-finished index.
+    delay = 2.0
+    for attempt in range(5):
+        with httpx.Client(timeout=TIMEOUT) as c:
+            r = c.post(
+                url,
+                params={"api-version": "2024-10-21"},
+                headers={"api-key": settings.azure_openai_api_key},
+                json={"input": texts},
+            )
+        if r.status_code in (404, 429, 500, 502, 503, 504) and attempt < 4:
+            time.sleep(delay)
+            delay *= 2
+            continue
+        r.raise_for_status()
+        data = r.json()["data"]
+        break
+    else:  # pragma: no cover - only on five consecutive failures
         r.raise_for_status()
         data = r.json()["data"]
     # The API may return results out of order; index is authoritative.
