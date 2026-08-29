@@ -28,7 +28,7 @@ import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 # Mapping to OpenTelemetry GenAI semantic conventions. Kept in one place so an exporter
@@ -57,7 +57,7 @@ class ToolCall:
     # to; comparing it against the run's principal is how escalation is detected.
     resource: str = ""
     scope: str = ""
-    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -70,7 +70,7 @@ class Run:
     actor_kind: str = "agent"  # 'agent' | 'human' - never pooled together
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     calls: list[ToolCall] = field(default_factory=list)
-    started_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     label: str = ""          # set only for evaluation data
     is_anomalous: int = -1   # -1 unknown, 0 benign, 1 anomalous
 
