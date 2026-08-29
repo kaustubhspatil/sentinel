@@ -35,7 +35,7 @@ the Results section stays empty rather than aspirational.
 | Evaluation harness (7 tasks, trajectory-scored) | working |
 | Adversarial suite + CI regression gate | working |
 | Behavioural monitoring library ([agentnorm](packages/agentnorm/)) | extracted, publishable |
-| RAG + retrieval ablation | not started |
+| RAG + retrieval ablation | working |
 | OpenAPI → MCP connector generation | not started |
 
 Currently loaded, from live feeds:
@@ -216,7 +216,37 @@ clearest argument in this repo for building the safety layer at all.
 Details, plus the bugs the harness found in the agent and the router, in
 [`docs/evaluation.md`](docs/evaluation.md).
 
-_Still to be measured:_ retrieval ablation (vector / graph / hybrid), multi-hop answer
+### Retrieval ablation
+
+2,382 documents, 193 queries whose ground truth was written by MITRE and CISA rather than
+by this project: a mitigation write-up must recover the technique it mitigates, a CISA
+required-action must recover the CVE it remediates.
+
+```
+strategy     hit@1   hit@5  hit@10     MRR  empty
+bm25         0.218   0.373   0.456   0.289      0
+graph        0.000   0.000   0.000   0.000    193
+dense        0.264   0.482   0.565   0.350      0
+hybrid       0.264   0.487   0.591   0.356      0
+```
+
+The aggregate says dense beats lexical by 11 points. Split by query type it reverses:
+
+| | mitigation → technique | CISA action → CVE |
+|---|---|---|
+| bm25 | **0.698** | 0.280 |
+| dense | 0.651 | 0.433 |
+| hybrid | 0.628 | **0.447** |
+
+**BM25 wins outright on one task and loses badly on the other**, because mitigation
+write-ups and technique descriptions share MITRE's vocabulary while CISA's operational
+prose shares almost none with a CVE description. The hybrid is not free either — fusing a
+strong arm with a weak one *degrades* the mitigation task from 0.698 to 0.628.
+
+Anyone shipping dense retrieval on the strength of the overall number would be deploying a
+regression for half their traffic. Details in [`docs/retrieval.md`](docs/retrieval.md).
+
+_Still to be measured:_ (vector / graph / hybrid), multi-hop answer
 accuracy against a naive-RAG baseline, detector precision–recall on labelled anomalies,
 LLM-judge calibration (Cohen's κ against human labels), and a latency–cost curve across
 model tiers.
