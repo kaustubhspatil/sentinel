@@ -64,9 +64,11 @@ Available tools:
 - attack_context(cve_id=None, technique_id=None)
 
 Rules:
+- You MUST call at least one tool before answering. You have live access to real data;
+  never claim you cannot retrieve something without trying.
 - Base every factual claim on tool output. Never invent hosts, versions, CVEs or counts.
 - Cite the entity ids your answer rests on.
-- If the tools cannot answer the question, say so plainly rather than guessing.
+- Only after tool calls have genuinely failed may you say the question is unanswerable.
 - Prefer few, well-chosen calls over many."""
 
 
@@ -87,6 +89,7 @@ class AgentResult:
     steps: list[Step] = field(default_factory=list)
     tool_sequence: list[str] = field(default_factory=list)
     malformed_calls: int = 0
+    premature_answers: int = 0
     llm_calls: int = 0
     input_tokens: int = 0
     output_tokens: int = 0
@@ -161,6 +164,19 @@ def run(
             history.append(Message("user", "That was not a single JSON object. Reply with one JSON object only."))
             continue
         if "answer" in payload:
+            # An answer with no tool call is a refusal dressed as a response. Observed on
+            # the first run: the model replied "I am unable to determine..." having called
+            # nothing, while the tools would have answered it in two calls. Prompting
+            # alone does not reliably prevent this, so it is enforced here and counted.
+            if not result.tool_sequence:
+                result.premature_answers += 1
+                history.append(Message("assistant", json.dumps(payload)))
+                history.append(Message(
+                    "user",
+                    "You answered without calling any tool. The data is available - "
+                    "call a tool first. Start with list_schema if unsure.",
+                ))
+                continue
             result.answer = str(payload.get("answer", ""))
             cites = payload.get("citations") or []
             result.citations = [str(c) for c in cites] if isinstance(cites, list) else []
@@ -204,7 +220,8 @@ if __name__ == "__main__":
     q = " ".join(sys.argv[1:]) or "Which tenant has the most outdated packages, and what is their SLA?"
     r = run(q)
     print(f"provider={r.provider}/{r.model} steps={r.tool_sequence} "
-          f"malformed={r.malformed_calls} tokens={r.input_tokens}+{r.output_tokens} "
+          f"malformed={r.malformed_calls} premature={r.premature_answers} "
+          f"tokens={r.input_tokens}+{r.output_tokens} "
           f"latency={r.latency_ms}ms reason={r.stopped_reason}")
     print("\nANSWER:", r.answer)
     print("CITATIONS:", r.citations)
