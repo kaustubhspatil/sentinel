@@ -23,11 +23,23 @@ the Results section stays empty rather than aspirational.
 |---|---|
 | Public threat-intel ingestion (KEV / EPSS / ATT&CK) | working |
 | Ontology and design rationale | drafted |
-| Backbone host + fleet | provisioning |
-| Knowledge graph load | not started |
+| Backbone host (Neo4j, ClickHouse, Redpanda, Temporal, Postgres) | running |
+| Reference-data load into graph and columnar store | working |
+| Fleet nodes | not started |
 | MCP tool server | not started |
 | Anomaly detection | not started |
 | Evaluation harness | not started |
+
+Currently loaded, from live feeds:
+
+| Store | Contents |
+|---|---|
+| Neo4j | 1,685 KEV vulnerabilities · 697 ATT&CK techniques · 44 mitigations · 15 tactics · 2,795 relationships |
+| ClickHouse | 365,950 EPSS scores/day (4.6 MiB/day compressed) |
+
+The split is the architecture working as designed: the graph holds the ~1.7k CVEs an
+operator reasons about, while the third of a million daily exploit-probability scores stay
+in the columnar store where a time series belongs.
 
 ## Why the data is real
 
