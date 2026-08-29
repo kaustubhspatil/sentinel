@@ -58,6 +58,8 @@ class ToolCall:
     resource: str = ""
     scope: str = ""
     started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    # Monotonic start, used only to compute duration. Excluded from serialisation.
+    _started: float | None = field(default=None, repr=False, compare=False)
 
 
 @dataclass
@@ -122,6 +124,33 @@ class RunRecorder:
                        actor_kind=actor_kind)
         self._step = 0
 
+    def start_call(
+        self, tool: str, args: dict[str, Any] | None = None, *, scope: str = ""
+    ) -> ToolCall:
+        """Begin a call without a `with` block.
+
+        Callback-driven frameworks report start and end as separate events, often
+        interleaved across concurrent tools, so a context manager cannot express them.
+        `tool_call` is built on top of this pair.
+        """
+        self._step += 1
+        call = ToolCall(tool=tool, step=self._step, args=dict(args or {}), scope=scope)
+        call._started = time.perf_counter()
+        return call
+
+    def complete_call(
+        self, call: ToolCall, *, ok: bool = True, error: str = "", result_size: int = 0
+    ) -> ToolCall:
+        """Finish a call started with `start_call` and attach it to the run."""
+        started = getattr(call, "_started", None)
+        call.duration_ms = int((time.perf_counter() - started) * 1000) if started else 0
+        call.ok = ok
+        call.error = error
+        if result_size:
+            call.result_size = result_size
+        self.run.calls.append(call)
+        return call
+
     @contextmanager
     def tool_call(
         self, tool: str, args: dict[str, Any] | None = None, *, scope: str = ""
@@ -131,18 +160,14 @@ class RunRecorder:
         A trace that omits failed calls hides exactly the behaviour worth detecting: an
         agent probing for a tool it lacks, or retrying a refused action.
         """
-        self._step += 1
-        call = ToolCall(tool=tool, step=self._step, args=dict(args or {}), scope=scope)
-        started = time.perf_counter()
+        call = self.start_call(tool, args, scope=scope)
         try:
             yield call
         except Exception as exc:
-            call.ok = False
-            call.error = f"{type(exc).__name__}: {exc}"
+            self.complete_call(call, ok=False, error=f"{type(exc).__name__}: {exc}")
             raise
-        finally:
-            call.duration_ms = int((time.perf_counter() - started) * 1000)
-            self.run.calls.append(call)
+        else:
+            self.complete_call(call, ok=True, result_size=call.result_size)
 
     def finish(self) -> Run:
         return self.run

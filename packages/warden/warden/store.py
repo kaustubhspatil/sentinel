@@ -34,6 +34,7 @@ def _encode(run: Run) -> str:
     d["started_at"] = run.started_at.isoformat()
     for call, raw in zip(run.calls, d["calls"], strict=True):
         raw["started_at"] = call.started_at.isoformat()
+        raw.pop("_started", None)   # monotonic timing slot, not part of the format
         # Arguments are recorded for post-hoc analysis, but they are the most likely
         # place for secrets and personal data to appear. Anything unserialisable is
         # stringified rather than dropped, so a trace never fails to persist because a

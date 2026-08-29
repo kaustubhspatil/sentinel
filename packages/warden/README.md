@@ -78,6 +78,39 @@ thresholds fall back to the observed maximum and the true false-positive rate
 will exceed the budget
 ```
 
+## Framework adapters
+
+For frameworks that report tool calls through callbacks rather than direct invocation:
+
+```python
+from warden import Session
+from warden.adapters.langchain import warden_callback
+
+session = Session(agent="researcher", version="v2", principal="acme")
+graph.invoke(state, config={"callbacks": [warden_callback(session)]})
+
+verdict = monitor.score(session.finish())
+```
+
+Works with LangChain and LangGraph. **warden still does not depend on either** - the base
+class is imported lazily and the handler works as a plain object without it, because
+LangChain duck-types handlers in the paths that matter. That is deliberate: a monitoring
+library that drags in an agent framework is unusable by anyone running a different one,
+and comparing agents across frameworks on equal footing is half the point.
+
+The adapter is tested with LangChain deliberately *not* installed - the callback contract
+is replayed instead - so the zero-dependency guarantee stays testable in CI.
+
+Two behaviours worth knowing, because callback streams are messier than they look:
+
+- **Concurrent tools are matched by the framework's `run_id`.** LangGraph runs tools in
+  parallel, so starts and ends interleave and pairing them by order is wrong.
+- **A call the framework never ends is recorded as failed, not discarded.** An agent
+  killed mid-tool leaves an open call, and a run that ends inside a tool is itself a
+  signal. Conversely an end with no start - the handler attached mid-run - is dropped,
+  because a call with no beginning has no duration and no arguments, and inventing them
+  would corrupt the baseline it feeds.
+
 ## Persistence
 
 `Monitor.fit` needs history, so a monitor that cannot remember is useless in practice.
