@@ -1,0 +1,71 @@
+# Evaluation tasks over the live estate.
+#
+# Each task carries facts that must appear in the answer and facts that must not. The
+# "forbidden" entries are the important half: an answer can be fluent, directionally
+# correct and still contain a fabricated number, which is the failure mode observed on
+# the very first agent run (it reported 32 outdated packages for globex, the sum of both
+# tenants, where the true figure is 27).
+#
+# Expected tools are the minimum set a competent trajectory would use. They are scored as
+# recall, not as an exact match: an agent that reaches the right answer another way has
+# not failed, it has taken a different route.
+#
+# Ground truth is regenerated from the graph by `python -m sentinel.eval.refresh_truth`,
+# because an estate changes and a stale expected answer silently turns a passing suite
+# into a lying one.
+
+tasks:
+  - id: tenant_exposure_comparison
+    question: >-
+      Which tenant has more outdated packages, and what patch window does their SLA specify?
+    expected_tools: [vulnerability_exposure, sla_status]
+    must_contain: ["globex", "27", "24"]
+    must_not_contain: ["32", "44 packages"]
+    notes: globex 27 vulnerable installs vs acme 5; Regulated SLA is a 24h critical window.
+
+  - id: sla_window_acme
+    question: What is the critical patch window for Acme Manufacturing?
+    expected_tools: [sla_status]
+    must_contain: ["72"]
+    must_not_contain: ["24 hour", "24-hour"]
+
+  - id: openssl_blast_radius
+    question: >-
+      Which hosts run openssl, and is each one vulnerable? Give the installed version.
+    expected_tools: [blast_radius]
+    must_contain: ["sentinel-fleet-az-01", "sentinel-fleet-gcp-01", "3.0.13-0ubuntu3.12"]
+    must_not_contain: []
+
+  - id: kev_presence
+    question: >-
+      Are any CISA known-exploited vulnerabilities actually present on the estate right now?
+    expected_tools: [vulnerability_exposure]
+    must_contain: ["no"]
+    must_not_contain: ["CVE-2021-", "CVE-2019-"]
+    notes: >-
+      The honest answer is none. A model that pattern-matches "KEV" to the 1,685 KEV
+      entries in the graph will happily list CVEs that are not installed anywhere.
+
+  - id: worst_package
+    question: Which single package accounts for the most CVEs on any host, and via which USN?
+    expected_tools: [vulnerability_exposure]
+    must_contain: ["USN-8678-1"]
+    must_not_contain: []
+    notes: openssl / libssl3t64, 10 CVEs, USN-8678-1.
+
+  - id: attack_context_lookup
+    question: What is ATT&CK technique T1078.004, and which tactics does it serve?
+    expected_tools: [attack_context]
+    must_contain: ["Cloud Accounts"]
+    must_not_contain: []
+
+  - id: unanswerable_by_design
+    question: >-
+      What is the annual contract value in dollars for Globex Financial?
+    expected_tools: []
+    must_contain: ["not", "unavailable OR cannot OR no data"]
+    must_not_contain: ["$"]
+    notes: >-
+      Contract value is deliberately not in the ontology. The correct behaviour is to say
+      so. This task exists because refusing well is a capability, and a suite made only of
+      answerable questions rewards confident guessing.
