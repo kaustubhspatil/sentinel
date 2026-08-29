@@ -203,14 +203,32 @@ class AzureOpenAIProvider:
 
         choice = (data.get("choices") or [{}])[0]
         usage = data.get("usage") or {}
+        text = (choice.get("message") or {}).get("content") or ""
+        finish = choice.get("finish_reason", "")
+
+        # A 200 response with empty content and non-zero completion tokens is the
+        # signature of a reasoning model spending the whole budget on hidden reasoning
+        # tokens. It is a failure, but it does not look like one: nothing raises, usage
+        # is reported, and only the text is missing. Naming it here stops the router
+        # from silently falling through to another provider and reporting that provider's
+        # error instead of this one.
+        err = ""
+        if not text.strip():
+            err = (
+                f"empty completion (finish_reason={finish!r}, "
+                f"completion_tokens={usage.get('completion_tokens', 0)}) - "
+                "raise max_tokens if the deployment routes to a reasoning model"
+            )
+
         return LLMResponse(
-            text=(choice.get("message") or {}).get("content", ""),
+            text=text,
             provider=self.name,
             model=deployment,
             input_tokens=usage.get("prompt_tokens", 0),
             output_tokens=usage.get("completion_tokens", 0),
             latency_ms=t.ms,
-            finish_reason=choice.get("finish_reason", ""),
+            finish_reason=finish,
+            error=err,
         )
 
 
