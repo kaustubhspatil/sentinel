@@ -1,6 +1,6 @@
 """Behavioural anomaly detectors over agent tool-call traces.
 
-Four detectors, each aimed at a failure mode the others cannot see. They are kept
+Five detectors, each aimed at a failure mode the others cannot see. They are kept
 separate rather than fused into one score because a fused score tells an operator that
 something is wrong without saying what, and "what" is the entire value at 3am.
 
@@ -23,9 +23,13 @@ of calls, given how this agent normally works? Catches paths where every individ
 is legitimate but the route is not - skipped discovery, repeated traversal - which no
 per-call detector can see.
 
-**Scope novelty.** Set membership rather than statistics: has this agent ever touched this
-tenant, this zone, this tool before? Escalation is not a rare event on a distribution, it
-is an event outside the support of one, and treating it statistically would only dilute it.
+**Scope violation.** Did a run scoped to one tenant touch another tenant's zones? An
+assertion, not a statistic. The first version asked whether the agent had ever seen the
+zone and caught 1 escalation in 25: agents legitimately serve several tenants, so
+familiarity was the wrong invariant. Scope consistency within a run is the right one.
+
+**Novel tool.** A tool this agent has never called. Separate from scope violation so the
+alert names which invariant broke.
 
 **Rate.** Calls per run against the agent's own baseline. Crude and included deliberately -
 it is the detector most likely to be redundant, and measuring that is the point.
@@ -172,27 +176,63 @@ class SequenceModel:
         return total / max(len(seq) - 1, 1)
 
 
-class ScopeNovelty:
-    """Membership test: has this agent been here before?"""
+class ScopeViolation:
+    """Cross-tenant access: did a run scoped to one tenant touch another's resources?
+
+    The first version of this asked whether the agent had ever seen the zone before, and
+    caught 1 of 25 escalations. The reason is instructive: agents legitimately serve
+    multiple tenants, so by the time an agent has worked for both acme and globex, every
+    zone is familiar and nothing looks novel. Familiarity was the wrong invariant.
+
+    The right one is scope consistency *within a run*: a run declared for tenant T should
+    not touch resources belonging to tenant U, regardless of what that agent has done for
+    U in other runs. That is an assertion, not a statistic, so it is checked as one.
+
+    Zone ownership is learned from benign traffic rather than declared, so the detector
+    keeps working as the estate changes.
+    """
 
     def __init__(self) -> None:
-        self.seen_tools: dict[str, set[str]] = defaultdict(set)
-        self.seen_tenants: dict[str, set[str]] = defaultdict(set)
-        self.seen_zones: dict[str, set[str]] = defaultdict(set)
+        self.zone_owner: dict[str, str] = {}
 
-    def fit(self, runs: list[Run]) -> "ScopeNovelty":
+    def fit(self, runs: list[Run]) -> "ScopeViolation":
+        tally: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
         for run in runs:
-            self.seen_tools[run.agent].update(run.tools)
-            self.seen_tenants[run.agent].add(run.tenant)
-            self.seen_zones[run.agent].update(z for z in run.zones if z)
+            for z in run.zones:
+                if z:
+                    tally[z][run.tenant] += 1
+        for zone, owners in tally.items():
+            self.zone_owner[zone] = max(owners.items(), key=lambda kv: kv[1])[0]
         return self
 
     def score(self, run: Run) -> float:
-        """Count of never-before-seen tools, tenants and zones in this run."""
-        novel = len(set(run.tools) - self.seen_tools[run.agent])
-        novel += 0 if run.tenant in self.seen_tenants[run.agent] else 1
-        novel += len({z for z in run.zones if z} - self.seen_zones[run.agent])
-        return float(novel)
+        """Number of calls reaching into a zone owned by a different tenant."""
+        violations = 0
+        for z in run.zones:
+            owner = self.zone_owner.get(z)
+            if owner and owner != run.tenant:
+                violations += 1
+        return float(violations)
+
+
+class NovelTool:
+    """A tool this agent has never used before.
+
+    Kept separate from scope violation so the alert says which invariant broke. Set
+    membership, not statistics: reaching a privileged tool for the first time is outside
+    the support of the distribution, not merely far out in its tail.
+    """
+
+    def __init__(self) -> None:
+        self.seen: dict[str, set[str]] = defaultdict(set)
+
+    def fit(self, runs: list[Run]) -> "NovelTool":
+        for run in runs:
+            self.seen[run.agent].update(run.tools)
+        return self
+
+    def score(self, run: Run) -> float:
+        return float(len(set(run.tools) - self.seen[run.agent]))
 
 
 class RateBaseline:
@@ -225,15 +265,19 @@ class RateBaseline:
 class DetectorSuite:
     volume: VolumeBaseline
     sequence: SequenceModel
-    scope: ScopeNovelty
+    scope: ScopeViolation
+    novel_tool: NovelTool
     rate: RateBaseline
+
+    NAMES = ("volume", "sequence", "scope", "novel_tool", "rate")
 
     @classmethod
     def fit(cls, benign_runs: list[Run], prior_strength: float = PRIOR_STRENGTH) -> "DetectorSuite":
         return cls(
             volume=VolumeBaseline(prior_strength).fit(benign_runs),
             sequence=SequenceModel().fit(benign_runs),
-            scope=ScopeNovelty().fit(benign_runs),
+            scope=ScopeViolation().fit(benign_runs),
+            novel_tool=NovelTool().fit(benign_runs),
             rate=RateBaseline().fit(benign_runs),
         )
 
@@ -242,5 +286,6 @@ class DetectorSuite:
             "volume": self.volume.score(run),
             "sequence": self.sequence.score(run),
             "scope": self.scope.score(run),
+            "novel_tool": self.novel_tool.score(run),
             "rate": self.rate.score(run),
         }
