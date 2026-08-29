@@ -16,6 +16,7 @@ flagged as an estimate rather than quietly presented as measured.
 from __future__ import annotations
 
 import json
+import time
 
 import httpx
 
@@ -182,24 +183,43 @@ class AzureOpenAIProvider:
         deployment = model or settings.azure_openai_deployment
         url = f"{endpoint}/openai/deployments/{deployment}/chat/completions"
 
+        payload = {
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
+            "temperature": kwargs.get("temperature", 0.0),
+            "max_tokens": kwargs.get("max_tokens", 1024),
+        }
+
+        # Retry the same deployment before giving up. A GlobalStandard deployment is
+        # served from several regions and returns intermittent 404s while a capacity
+        # change propagates - the identical request succeeds on the next attempt. Falling
+        # straight through to another provider on a transient status wastes the one
+        # provider that works and, worse, reports the *fallback's* error as the failure.
         t = Timer()
-        try:
-            with httpx.Client(timeout=TIMEOUT) as c:
-                r = c.post(
-                    url,
-                    params={"api-version": self.API_VERSION},
-                    headers={"api-key": settings.azure_openai_api_key},
-                    json={
-                        "messages": [{"role": m.role, "content": m.content} for m in messages],
-                        "temperature": kwargs.get("temperature", 0.0),
-                        "max_tokens": kwargs.get("max_tokens", 1024),
-                    },
-                )
-                r.raise_for_status()
-                data = r.json()
-        except Exception as exc:  # noqa: BLE001
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                with httpx.Client(timeout=TIMEOUT) as c:
+                    r = c.post(
+                        url,
+                        params={"api-version": self.API_VERSION},
+                        headers={"api-key": settings.azure_openai_api_key},
+                        json=payload,
+                    )
+                    if r.status_code in (404, 408, 429, 500, 502, 503, 504) and attempt < 2:
+                        time.sleep(0.75 * (attempt + 1))
+                        continue
+                    r.raise_for_status()
+                    data = r.json()
+                    break
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                if attempt == 2:
+                    return LLMResponse("", self.name, deployment, latency_ms=t.ms,
+                                       error=f"{type(exc).__name__}: {exc}")
+                time.sleep(0.75 * (attempt + 1))
+        else:
             return LLMResponse("", self.name, deployment, latency_ms=t.ms,
-                               error=f"{type(exc).__name__}: {exc}")
+                               error=f"exhausted retries: {last_exc}")
 
         choice = (data.get("choices") or [{}])[0]
         usage = data.get("usage") or {}
