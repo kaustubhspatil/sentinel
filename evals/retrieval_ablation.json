@@ -27,13 +27,23 @@
       "returned_nothing": 193
     },
     {
+      "strategy": "dense",
+      "queries": 193,
+      "hit@1": 0.264,
+      "hit@5": 0.482,
+      "hit@10": 0.565,
+      "recall@10": 0.433,
+      "mrr": 0.35,
+      "returned_nothing": 0
+    },
+    {
       "strategy": "hybrid",
       "queries": 193,
-      "hit@1": 0.218,
-      "hit@5": 0.373,
-      "hit@10": 0.456,
-      "recall@10": 0.288,
-      "mrr": 0.289,
+      "hit@1": 0.264,
+      "hit@5": 0.487,
+      "hit@10": 0.591,
+      "recall@10": 0.438,
+      "mrr": 0.356,
       "returned_nothing": 0
     }
   ],
@@ -60,13 +70,23 @@
         "returned_nothing": 43
       },
       {
-        "strategy": "hybrid",
+        "strategy": "dense",
         "queries": 43,
         "hit@1": 0.419,
-        "hit@5": 0.698,
-        "hit@10": 0.884,
-        "recall@10": 0.128,
-        "mrr": 0.544,
+        "hit@5": 0.651,
+        "hit@10": 0.698,
+        "recall@10": 0.107,
+        "mrr": 0.499,
+        "returned_nothing": 0
+      },
+      {
+        "strategy": "hybrid",
+        "queries": 43,
+        "hit@1": 0.395,
+        "hit@5": 0.628,
+        "hit@10": 0.814,
+        "recall@10": 0.127,
+        "mrr": 0.501,
         "returned_nothing": 0
       }
     ],
@@ -92,13 +112,23 @@
         "returned_nothing": 150
       },
       {
+        "strategy": "dense",
+        "queries": 150,
+        "hit@1": 0.22,
+        "hit@5": 0.433,
+        "hit@10": 0.527,
+        "recall@10": 0.527,
+        "mrr": 0.308,
+        "returned_nothing": 0
+      },
+      {
         "strategy": "hybrid",
         "queries": 150,
-        "hit@1": 0.16,
-        "hit@5": 0.28,
-        "hit@10": 0.333,
-        "recall@10": 0.333,
-        "mrr": 0.217,
+        "hit@1": 0.227,
+        "hit@5": 0.447,
+        "hit@10": 0.527,
+        "recall@10": 0.527,
+        "mrr": 0.314,
         "returned_nothing": 0
       }
     ]
