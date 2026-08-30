@@ -4,9 +4,10 @@ Ordered by value per unit of effort, with the honest reason for each.
 
 ## Do these first — they cost little and matter most
 
-**1. Publish to PyPI.** `agentnorm` is free, the build is verified, and the repo is public.
-Runbook: `docs/_private/RELEASE.md`. Nothing else on this list matters if nobody can
-`pip install` it.
+**1. ~~Publish to PyPI~~ — done.** Live at https://pypi.org/project/agentnorm/, verified
+installing into a clean environment with zero dependencies. What remains: rotate the token
+used for the upload and reissue one scoped to the `agentnorm` project, a scope that only
+exists now the project does.
 
 **2. Anchor the audit chain.** Hash chaining proves integrity, not immutability. A twenty-line
 addition — write `chain_head()` and a timestamp to an append-only destination the writer
@@ -48,6 +49,14 @@ agentnorm a producer for infrastructure teams already have, rather than another 
 agent sprawl is worse. "Which agents exist and what do they touch" is a smaller, more
 tractable product than detection, and it is the thing a buyer asks for first — you cannot
 monitor what you cannot list.
+
+## Now done, listed so nobody re-does them
+
+- OpenAPI → MCP connector generation — the last JD bullet. 1,222 GitHub operations to 40
+  capability tools, with risk, resource and scope derived from the spec so a generated
+  connector arrives already instrumented. See `docs/connectors.md`.
+- Competitive due diligence — Agentomaly, AgentOps, AgentLens and TRACE occupy this
+  category; all four are named in the README with when to pick them instead.
 
 ## Deliberately not worth doing
 

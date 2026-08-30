@@ -36,7 +36,7 @@ the Results section stays empty rather than aspirational.
 | Adversarial suite + CI regression gate | working |
 | Behavioural monitoring library ([agentnorm](packages/agentnorm/)) | extracted, publishable |
 | RAG + retrieval ablation | working |
-| OpenAPI → MCP connector generation | not started |
+| OpenAPI → MCP connector generation | working |
 
 Currently loaded, from live feeds:
 
@@ -215,6 +215,29 @@ clearest argument in this repo for building the safety layer at all.
 
 Details, plus the bugs the harness found in the agent and the router, in
 [`docs/evaluation.md`](docs/evaluation.md).
+
+### OpenAPI → MCP connector generation
+
+GitHub's REST API is 1,222 operations. Exposed one-to-one that is not a capable agent — it
+is a context window full of tool definitions and a model that cannot choose. Grouping by the
+API's own tags gives **40 capability-level tools (31× fewer)**, with the agent naming the
+operation as an argument, so tool count follows the domain rather than the endpoint count.
+
+The more useful half is what generators normally discard. Method, path and parameters
+already say whether an operation reads or writes, whether it is destructive, and whose data
+it touches — which is exactly what the monitor otherwise asks a human to supply:
+
+```
+risk               531 low · 427 medium · 264 high
+scoped             1065 of 1222 operations
+destructive        187
+unscoped writes    54  (22 of them destructive or sensitive)
+```
+
+That last number is the actionable one. Those 54 writes carry nothing in the request saying
+whose data they affect — `/gists/{gist_id}`, `/credentials/revoke`, `/installation/token` —
+so scope-based monitoring is structurally blind to them and credential isolation is doing
+work request inspection cannot check. Details in [`docs/connectors.md`](docs/connectors.md).
 
 ### Retrieval ablation
 
