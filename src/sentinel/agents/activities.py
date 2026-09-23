@@ -112,9 +112,7 @@ async def plan_remediation(findings: list[dict[str, Any]], tenant: str) -> dict[
         for f in findings
     ]
 
-    # Anything touching a known-exploited CVE, or more than a handful of packages at
-    # once, stays behind a human gate. The threshold is explicit and auditable rather
-    # than left to a model's judgement.
+    # KEV-related or large changes need human approval
     requires_approval = bool(critical) or len(actions) > 5
 
     return {

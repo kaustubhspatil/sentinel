@@ -123,10 +123,7 @@ class SequenceModel:
         return self
 
     def score(self, run: Run) -> Score:
-        # Transition structure is agent-specific, like run length and unlike result size.
-        # A triage agent's normal path is not evidence about a reporting agent's, so the
-        # population model describes neither. Measured: pooling it alerted on 100% of
-        # known-benign runs from an unseen agent. Suppressed instead.
+        # transitions are per agent, pooled model gave 100% false alerts so skip it
         if run.key not in self.vocab:
             return Score(self.name, math.nan, calibrated=False)
         counts = self.counts[run.key]
@@ -190,7 +187,7 @@ class ScopeViolation:
                 continue
             owner = self.owner.get(call.scope)
             if owner is None:
-                # Unknown scope: fall back to the direct comparison.
+                # unknown scope, compare directly
                 violations += int(call.scope != run.principal)
             elif owner != run.principal:
                 violations += 1

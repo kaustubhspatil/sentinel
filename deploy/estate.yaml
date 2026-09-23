@@ -1,12 +1,5 @@
-# The commercial and topological facts about the estate.
-#
-# These are not discoverable from a host - no agent can tell you who is billed for a
-# machine or what SLA covers it - so they are declared here and loaded into the graph
-# alongside the discovered inventory. Everything below is real: two tenants, three
-# hosts actually running, with contract terms chosen to make SLA questions non-trivial.
-#
-# Site is the physical/organisational location; NetworkZone is the security boundary.
-# They deliberately do not line up one-to-one - see ontology/ontology.md.
+# estate facts that can't be discovered from hosts (tenants, billing, SLAs)
+# site != network zone on purpose, see ontology/ontology.md
 
 customers:
   - id: acme
@@ -17,7 +10,7 @@ customers:
         sla:
           id: acme-sla-standard
           name: Standard
-          # Hours to remediate a known-exploited vulnerability, by severity band.
+          # hours to fix a KEV vuln, by severity
           patch_window_critical_hours: 72
           patch_window_high_hours: 168
           response_minutes: 60
@@ -36,8 +29,7 @@ customers:
         sla:
           id: globex-sla-regulated
           name: Regulated
-          # Tighter window: this tenant is the one where an SLA breach actually bites,
-          # which is what makes cross-tenant blast-radius questions interesting.
+          # tighter SLA for this tenant
           patch_window_critical_hours: 24
           patch_window_high_hours: 72
           response_minutes: 15
@@ -85,8 +77,7 @@ hosts:
     instance_type: Standard_B1s
     os_release: noble
 
-  # The backbone is modelled too. An MSP that does not monitor its own management
-  # plane has a blind spot exactly where an attacker would most like one.
+  # monitor the backbone too
   - id: sentinel-backbone
     hostname: sentinel-backbone
     tenant: internal

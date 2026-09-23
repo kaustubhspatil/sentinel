@@ -128,9 +128,7 @@ def evaluate_transfer(budget: float = 0.002, seed: int = 5) -> dict[str, Any]:
         random.Random(seed + 1).shuffle(r2)
         half = len(r2) // 2
         s2 = DetectorSuite.fit(r2[:half])
-        # With this few runs a 0.2% quantile is not estimable, so the threshold is the
-        # observed maximum on the fit half. Stated because it makes the alert rate a
-        # lower bound rather than a measurement.
+        # too few runs for a 0.2% quantile, use the max instead (so this is a lower bound)
         t2 = _thresholds(s2, r2[:half], budget)
         a2 = {k: sum(1 for r in r2[half:] if s2.score(r)[k].value > t2[k]) for k in t2}
         any2 = sum(1 for r in r2[half:] if any(s2.score(r)[k].value > t2[k] for k in t2))

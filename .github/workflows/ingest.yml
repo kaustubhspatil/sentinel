@@ -1,8 +1,6 @@
 name: ingest-public-feeds
 
-# The daily EPSS series only has value if it is collected daily, so this runs on
-# GitHub's schedule rather than on the backbone - it keeps accumulating even when
-# the backbone is down or preempted.
+# runs on GH schedule so EPSS keeps collecting even if the backbone is down
 on:
   schedule:
     - cron: "17 6 * * *"

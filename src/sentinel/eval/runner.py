@@ -82,17 +82,10 @@ def run_task(task: dict[str, Any], tier: str = "small") -> TaskResult:
     tool_hits = [t for t in expected if t in called]
     tool_recall = len(tool_hits) / len(expected) if expected else 1.0
 
-    # Infrastructure failure is not model failure, and conflating them makes the suite
-    # useless for deciding anything. A provider exhausting its quota says nothing about
-    # whether the agent would have answered correctly, so errored tasks are excluded
-    # from the pass rate and reported separately. The first run of this suite scored
-    # 4/7 with two of the three failures caused by rate limits, which would have read as
-    # a 57% capability score.
+    # exclude infra errors (rate limits etc.) from the pass rate
     errored = res.stopped_reason.startswith("llm_error")
 
-    # A task passes only with every required fact and no fabrication. Partial credit is
-    # reported but does not pass: an operator acting on a half-right answer is not
-    # half-safe.
+    # pass = all required facts and nothing fabricated
     passed = (not errored) and fact_recall == 1.0 and not fabricated
 
     return TaskResult(

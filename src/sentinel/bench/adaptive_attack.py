@@ -103,11 +103,10 @@ class AdaptiveAttacker:
             self.history, tier="small", purpose="adaptive_attacker",
             temperature=0.9, max_tokens=1024,
         )
-        # A refusal is a non-attempt, not a clever attack. Detect the common shapes so a
-        # refused turn is visible in the log rather than silently scored as a weak attack.
+        # detect refusals so they're logged, not scored as weak attacks
         if resp.ok and any(s in resp.text.lower() for s in
                            ("i can't", "i cannot", "i won't", "i'm sorry", "cannot help")):
-            resp.text = ""  # empty proposal; the agent will simply not be injected
+            resp.text = ""  # empty proposal, no injection
         text = resp.text.strip() if resp.ok else ""
         self.history.append(Message("assistant", text or "(no proposal)"))
         return text

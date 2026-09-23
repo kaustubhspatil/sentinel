@@ -18,6 +18,6 @@ msp.env*
 docs/_private/
 deploy/.env
 
-# AgentDojo per-run transcripts: regenerated artifacts, not results
+# AgentDojo transcripts (regenerated)
 evals/agentdojo_logs/
 evals/last_report.json

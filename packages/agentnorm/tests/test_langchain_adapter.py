@@ -52,7 +52,7 @@ def test_interleaved_concurrent_tools_are_matched_by_run_id():
 
     handler.on_tool_start({"name": "slow"}, "", run_id=a, inputs={"n": 1})
     handler.on_tool_start({"name": "fast"}, "", run_id=b, inputs={"n": 2})
-    handler.on_tool_end([1, 2], run_id=b)          # fast finishes first
+    handler.on_tool_end([1, 2], run_id=b)          # fast one finishes first
     handler.on_tool_end([1, 2, 3, 4], run_id=a)
 
     run = handler.finish()

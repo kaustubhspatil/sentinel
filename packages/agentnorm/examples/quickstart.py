@@ -8,7 +8,7 @@ from pathlib import Path
 
 from agentnorm import JsonlStore, Monitor, Session
 
-# --- an agent you already have -------------------------------------------------
+# example agent
 DB = {"acme": list(range(20)), "globex": list(range(400))}
 
 
@@ -43,23 +43,23 @@ def main() -> None:
     path = Path(tempfile.mkdtemp()) / "history.jsonl"
     store = JsonlStore(path)
 
-    # 1. Accumulate normal behaviour.
+    # 1. collect normal runs
     for _ in range(300):
         run_agent(store, tenant=random.choice(["acme", "globex"]))
 
-    # 2. Learn from it.
+    # 2. fit
     monitor = Monitor.fit(store.read())
     print(f"fitted on {len(store.read())} runs; thresholds: "
           + ", ".join(f"{k}={v:.2f}" for k, v in monitor.thresholds.items()))
     for w in monitor.warnings:
         print("  warning:", w)
 
-    # 3. Score new runs.
+    # 3. score
     print("\nnormal run          ->", monitor.score(run_agent(store, tenant="acme")).explain())
 
     exfil = Session(agent="triage", version="v1", principal="acme",
                     scope_of=lambda t, a, r: a.get("tenant"))
-    exfil.wrap(TOOLS)["export_all"](tenant="globex")   # wrong tenant AND huge result
+    exfil.wrap(TOOLS)["export_all"](tenant="globex")   # wrong tenant + huge result
     print("exfiltration attempt ->", monitor.score(exfil.finish()).explain())
 
     print("new agent version   ->",

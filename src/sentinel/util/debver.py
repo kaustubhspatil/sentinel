@@ -40,7 +40,7 @@ def _compare_part(a: str, b: str) -> int:
     """Compare one version part (upstream or revision) using the dpkg algorithm."""
     ia = ib = 0
     while ia < len(a) or ib < len(b):
-        # Non-digit run.
+        # non-digit part
         first_diff = 0
         while (ia < len(a) and not a[ia].isdigit()) or (ib < len(b) and not b[ib].isdigit()):
             ca = _order(a[ia]) if ia < len(a) and not a[ia].isdigit() else 0
@@ -55,7 +55,7 @@ def _compare_part(a: str, b: str) -> int:
         if first_diff:
             return 1 if first_diff > 0 else -1
 
-        # Digit run. Leading zeros are insignificant, so compare numerically.
+        # digit part, compare numerically
         sa = ia
         while ia < len(a) and a[ia].isdigit():
             ia += 1
@@ -73,9 +73,7 @@ def _compare_part(a: str, b: str) -> int:
 def parse(version: str) -> tuple[int, str, str]:
     """Split a version into (epoch, upstream, revision)."""
     v = version.strip()
-    # A trailing hyphen means an empty revision, which Debian treats as invalid rather
-    # than as "no revision". Rejecting it keeps a malformed version out of the matcher
-    # instead of letting it compare as something plausible.
+    # trailing hyphen = empty revision, invalid
     if v.endswith("-") or v.endswith(":"):
         raise ValueError(f"invalid Debian version (empty component): {version!r}")
     m = _VERSION_RE.match(v)

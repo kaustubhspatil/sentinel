@@ -26,7 +26,7 @@ from agentnorm.trace import Run, ToolCall
 
 from sentinel.store.agentnorm_store import ClickHouseStore
 
-# The benign tool vocabulary, and the order a well-behaved triage run tends to follow.
+# benign tools, in typical order
 DISCOVERY = ["list_schema", "find_entities"]
 ANALYSIS = ["vulnerability_exposure", "sla_status", "traverse"]
 CONTEXT = ["attack_context", "blast_radius"]
@@ -34,8 +34,7 @@ CONTEXT = ["attack_context", "blast_radius"]
 TENANTS = ["acme", "globex"]
 AGENTS = [("remediation", "v1"), ("triage", "v1"), ("reporting", "v2")]
 
-# Tools an agent may exist but should never call in normal operation - the "unexpected
-# tool" signal. Kept separate from the benign vocabulary so the label is unambiguous.
+# tools that exist but shouldn't be called normally
 PRIVILEGED_TOOLS = ["delete_host", "rotate_credentials", "export_all_tenants"]
 
 ZONES = {
@@ -94,7 +93,7 @@ def benign_run(rng: random.Random, agent: str, version: str, tenant: str) -> Run
         _emit(ctx, rng.choice(ANALYSIS), rng, resource=f"host-{rng.randint(1,3)}")
     if rng.random() < 0.6:
         _emit(ctx, rng.choice(CONTEXT), rng)
-    # Real runs fail sometimes; a detector that treats any error as suspicious is useless.
+    # some errors are normal
     if rng.random() < 0.08:
         _emit(ctx, rng.choice(ANALYSIS), rng, rows=0, ok=False)
     return ctx

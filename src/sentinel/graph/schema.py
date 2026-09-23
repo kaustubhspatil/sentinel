@@ -12,14 +12,14 @@ from __future__ import annotations
 from sentinel.graph.client import session
 
 CONSTRAINTS = [
-    # --- global reference data (shared across tenants by design) ---
+    # global reference data
     "CREATE CONSTRAINT vuln_id IF NOT EXISTS FOR (v:Vulnerability) REQUIRE v.cve_id IS UNIQUE",
     "CREATE CONSTRAINT technique_id IF NOT EXISTS FOR (t:Technique) REQUIRE t.attack_id IS UNIQUE",
     "CREATE CONSTRAINT tactic_id IF NOT EXISTS FOR (t:Tactic) REQUIRE t.shortname IS UNIQUE",
     "CREATE CONSTRAINT mitigation_id IF NOT EXISTS FOR (m:Mitigation) REQUIRE m.attack_id IS UNIQUE",
     "CREATE CONSTRAINT package_key IF NOT EXISTS FOR (p:Package) REQUIRE p.key IS UNIQUE",
     "CREATE CONSTRAINT rootcause_key IF NOT EXISTS FOR (r:RootCause) REQUIRE r.key IS UNIQUE",
-    # --- estate ---
+    # estate
     "CREATE CONSTRAINT customer_id IF NOT EXISTS FOR (c:Customer) REQUIRE c.id IS UNIQUE",
     "CREATE CONSTRAINT contract_id IF NOT EXISTS FOR (c:Contract) REQUIRE c.id IS UNIQUE",
     "CREATE CONSTRAINT site_id IF NOT EXISTS FOR (s:Site) REQUIRE s.id IS UNIQUE",
@@ -27,7 +27,7 @@ CONSTRAINTS = [
     "CREATE CONSTRAINT host_id IF NOT EXISTS FOR (h:Host) REQUIRE h.id IS UNIQUE",
     "CREATE CONSTRAINT install_id IF NOT EXISTS FOR (i:PackageInstall) REQUIRE i.id IS UNIQUE",
     "CREATE CONSTRAINT incident_id IF NOT EXISTS FOR (i:Incident) REQUIRE i.id IS UNIQUE",
-    # --- actors and their actions (the half that makes agents observable) ---
+    # actors and actions
     "CREATE CONSTRAINT actor_id IF NOT EXISTS FOR (a:Actor) REQUIRE a.id IS UNIQUE",
     "CREATE CONSTRAINT agentrun_id IF NOT EXISTS FOR (r:AgentRun) REQUIRE r.id IS UNIQUE",
     "CREATE CONSTRAINT action_id IF NOT EXISTS FOR (a:Action) REQUIRE a.id IS UNIQUE",
@@ -35,8 +35,7 @@ CONSTRAINTS = [
 ]
 
 INDEXES = [
-    # tenant_id is on the hot path of every estate query: isolation is enforced in the
-    # query layer, so it must be cheap to filter on.
+    # index tenant_id, it's in every query
     "CREATE INDEX host_tenant IF NOT EXISTS FOR (h:Host) ON (h.tenant_id)",
     "CREATE INDEX incident_tenant IF NOT EXISTS FOR (i:Incident) ON (i.tenant_id)",
     "CREATE INDEX agentrun_tenant IF NOT EXISTS FOR (r:AgentRun) ON (r.tenant_id)",

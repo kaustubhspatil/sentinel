@@ -30,7 +30,7 @@ def make_run(agent="triage", principal="acme", n=3):
     return rec.finish()
 
 
-# --- canonicalisation --------------------------------------------------------------
+# canonicalisation
 
 def test_canonical_is_key_order_independent():
     a = {"b": 1, "a": {"d": 2, "c": 3}}
@@ -49,7 +49,7 @@ def test_canonical_preserves_unicode_without_escaping():
     assert "é" in canonical({"name": "café"})
 
 
-# --- chain construction ------------------------------------------------------------
+# chain
 
 def test_records_chain_by_hash_and_parent():
     chain = AuditChain()
@@ -63,7 +63,7 @@ def test_records_chain_by_hash_and_parent():
 
 def test_run_produces_lifecycle_bookends_and_one_record_per_call():
     records = record_run(AuditChain(), make_run(n=4))
-    assert len(records) == 6  # started + 4 calls + finished
+    assert len(records) == 6  # start + 4 calls + finish
     assert records[0]["action_detail"]["event"] == "run_started"
     assert records[-1]["action_detail"]["event"] == "run_finished"
     assert sum(r["action_type"] == "tool_call" for r in records) == 4
@@ -91,7 +91,7 @@ def test_invalid_vocabulary_is_rejected():
                      action_type="not_a_type", action_detail={}, outcome="success")
 
 
-# --- delegation --------------------------------------------------------------------
+# delegation
 
 def test_delegation_records_the_chain_not_the_prompt():
     chain = AuditChain()
@@ -107,7 +107,7 @@ def test_delegation_records_the_chain_not_the_prompt():
     assert "send the quarterly report" not in json.dumps(rec)
 
 
-# --- tamper evidence ---------------------------------------------------------------
+# tamper checks
 
 def test_intact_chain_verifies():
     records = record_run(AuditChain(), make_run())
@@ -145,7 +145,7 @@ def test_appending_a_forged_record_is_detected():
     assert not verify(records).ok
 
 
-# --- on-disk log -------------------------------------------------------------------
+# on-disk log
 
 def test_log_roundtrips_and_verifies(tmp_path):
     log = AuditLog(tmp_path / "audit.jsonl")

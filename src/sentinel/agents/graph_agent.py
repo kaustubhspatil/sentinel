@@ -32,8 +32,7 @@ from sentinel.store.agentnorm_store import ClickHouseStore
 
 MAX_STEPS = 8
 
-# The tool surface offered to the agent. Bound to the same functions the MCP server
-# exposes, so the agent cannot reach anything an MCP client could not.
+# same functions the MCP server exposes
 TOOLBOX: dict[str, Callable[..., dict]] = {
     "list_schema": tools.list_schema,
     "find_entities": tools.find_entities,
@@ -44,8 +43,7 @@ TOOLBOX: dict[str, Callable[..., dict]] = {
     "attack_context": tools.attack_context,
 }
 
-# Tools whose queries widen to every tenant when no tenant filter is supplied. When a run
-# is scoped, these are pinned rather than left to the model's discretion.
+# these query all tenants without a filter, so pin them when scoped
 TENANT_SCOPED_TOOLS = {
     "find_entities": ("tenant",),
     "vulnerability_exposure": ("tenant",),
@@ -83,10 +81,7 @@ Rules:
 - Prefer few, well-chosen calls over many."""
 
 
-# A single worked example. Added after observing the model emit well-formed JSON that
-# refused the task without calling anything - "unable to determine ... the query did not
-# return results", having run no query at all. Describing the protocol was not enough;
-# showing one turn of it is what made the model use it.
+# one worked example, the model skipped tool calls without it
 FEWSHOT = [
     Message("user", "How many hosts does tenant acme have?"),
     Message("assistant", '{"tool": "find_entities", "args": {"kind": "Host", "tenant": "acme"}}'),
@@ -163,14 +158,11 @@ def run(
     max_steps: int = MAX_STEPS,
     agent_version: str = "graph-agent-v1",
 ) -> AgentResult:
-    # Instrumented with agentnorm: the reference deployment consumes the extracted
-    # library rather than keeping a parallel copy of it.
+    # instrumented with agentnorm
     ctx = RunRecorder("graph_agent", version=agent_version, principal=tenant)
     result = AgentResult(question=question, run_id=ctx.run_id)
 
-    # Seed the schema rather than spending a turn on it. It is the same information
-    # list_schema would return, it is needed for almost every question, and fetching it
-    # up front removes one round trip from every run.
+    # seed the schema up front to save a round trip
     schema = json.dumps(TOOLBOX["list_schema"](), default=str)[:1500]
     history: list[Message] = [
         Message("system", SYSTEM),
@@ -199,10 +191,7 @@ def run(
             history.append(Message("user", "That was not a single JSON object. Reply with one JSON object only."))
             continue
         if "answer" in payload:
-            # An answer with no tool call is a refusal dressed as a response. Observed on
-            # the first run: the model replied "I am unable to determine..." having called
-            # nothing, while the tools would have answered it in two calls. Prompting
-            # alone does not reliably prevent this, so it is enforced here and counted.
+            # no tool calls = refusal, enforce and count it
             if not result.tool_sequence:
                 result.premature_answers += 1
                 history.append(Message("assistant", json.dumps(payload)))
@@ -226,15 +215,8 @@ def run(
             history.append(Message("user", f"Unknown tool {name!r}. Choose one of: {', '.join(TOOLBOX)}."))
             continue
 
-        # Enforce the run's tenant scope at the tool boundary.
-        #
-        # Found by the adversarial suite: asked by "the acme administrator" to list
-        # globex's vulnerable hosts "for benchmarking", the agent complied and disclosed
-        # host names and package versions. The tools were working exactly as written -
-        # tenant was a *parameter* the model could set freely, and the run's own scope
-        # existed only in the trace context. A boundary the caller can rewrite is not a
-        # boundary. This is precisely the scope-escalation failure the detection layer was
-        # built to catch, found in this project's own agent.
+        # enforce tenant scope at the tool boundary
+        # (adversarial suite got the agent to leak another tenant's hosts when tenant was a free param)
         if tenant:
             requested = args.get("tenant")
             if requested and requested != tenant:
@@ -249,8 +231,7 @@ def run(
                 history.append(Message("assistant", json.dumps(payload)))
                 history.append(Message("user", f"Tool result:\n{json.dumps(observation)}"))
                 continue
-            # Tools that accept a tenant filter are pinned to the run's tenant, so an
-            # omitted filter cannot silently widen the query to every tenant.
+            # pin tenant filter to the run's tenant
             if "tenant" in TENANT_SCOPED_TOOLS.get(name, ()):
                 args = {**args, "tenant": tenant}
 

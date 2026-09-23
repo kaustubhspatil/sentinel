@@ -1,18 +1,7 @@
-# Evaluation tasks over the live estate.
-#
-# Each task carries facts that must appear in the answer and facts that must not. The
-# "forbidden" entries are the important half: an answer can be fluent, directionally
-# correct and still contain a fabricated number, which is the failure mode observed on
-# the very first agent run (it reported 32 outdated packages for globex, the sum of both
-# tenants, where the true figure is 27).
-#
-# Expected tools are the minimum set a competent trajectory would use. They are scored as
-# recall, not as an exact match: an agent that reaches the right answer another way has
-# not failed, it has taken a different route.
-#
-# Ground truth is regenerated from the graph by `python -m sentinel.eval.refresh_truth`,
-# because an estate changes and a stale expected answer silently turns a passing suite
-# into a lying one.
+# Eval tasks over the live estate.
+# each task has required facts and forbidden facts (to catch made-up numbers)
+# expected tools are scored as recall, not exact match
+# regenerate truth with `python -m sentinel.eval.refresh_truth`
 
 tasks:
   - id: tenant_exposure_comparison

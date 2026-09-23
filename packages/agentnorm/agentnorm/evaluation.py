@@ -169,8 +169,7 @@ def sensitivity(
         str(v): summarise(run_at(calibration_fraction=v)) for v in calibration_fractions
     }
 
-    # A parameter is load-bearing if moving it across the swept range moves recall by
-    # more than split noise. The baseline's own seed-to-seed spread is that noise floor.
+    # a param matters if it moves recall more than seed noise
     noise = out["baseline"]["recall_range"][1] - out["baseline"]["recall_range"][0]
     verdict: dict[str, Any] = {"seed_noise_in_recall": round(noise, 3)}
     for param, results in out["sweeps"].items():

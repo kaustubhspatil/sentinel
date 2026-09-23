@@ -19,7 +19,7 @@ def failing_tool() -> None:
     raise RuntimeError("upstream down")
 
 
-# --- wrapping must be transparent -------------------------------------------------
+# wrapping
 
 def test_wrapped_tool_returns_the_same_value():
     session = Session(agent="a")
@@ -52,7 +52,7 @@ def test_tool_metadata_survives_wrapping():
     assert wrapped.__name__ == "search"
 
 
-# --- size inference ---------------------------------------------------------------
+# size inference
 
 @pytest.mark.parametrize(
     "result,expected",
@@ -61,7 +61,7 @@ def test_tool_metadata_survives_wrapping():
         ({"results": [1, 2, 3]}, 3),
         ({"rows": [1, 2]}, 2),
         ([1, 2, 3, 4], 4),
-        ("a string", 1),                          # not 8 - a string is one result
+        ("a string", 1),                          # string counts as one result
         (None, 0),
         (object(), 1),
     ],
@@ -76,7 +76,7 @@ def test_custom_size_of_is_used():
     assert session.finish().calls[0].result_size == 999
 
 
-# --- scope extraction -------------------------------------------------------------
+# scope extraction
 
 def test_scope_of_enables_violation_detection():
     session = Session(
@@ -99,7 +99,7 @@ def test_unknown_scope_is_not_treated_as_a_violation():
     assert run.calls[0].scope == ""
 
 
-# --- persistence ------------------------------------------------------------------
+# persistence
 
 def _run(agent="a", tenant="acme"):
     session = Session(agent=agent, version="v1", principal=tenant,

@@ -31,9 +31,7 @@ from typing import Any
 WRITE_METHODS = {"post", "put", "patch", "delete"}
 DESTRUCTIVE_METHODS = {"delete"}
 
-# Path segments that mark an operation as touching authorisation or credentials, whatever
-# its HTTP method. These are worth flagging separately: a POST that creates a token is not
-# the same kind of write as a POST that creates a comment.
+# auth/credential related path segments
 SENSITIVE = re.compile(
     r"/(tokens?|keys?|secrets?|credentials?|permissions?|admin|billing|payments?|"
     r"members?|collaborators?|teams?)(/|$)",
@@ -41,12 +39,8 @@ SENSITIVE = re.compile(
 )
 PARAM = re.compile(r"\{([^}]+)\}")
 
-# Path parameters that name an owner rather than an item. This list is a judgement call and
-# the generator treats it as one: the first version omitted "enterprise", which silently
-# classified every /enterprises/{enterprise}/... write as unscoped. That is the failure mode
-# worth designing against - a missing keyword does not error, it quietly under-reports what
-# monitoring can see. The generator therefore reports the operations it could not scope so a
-# human reviews the gap rather than inheriting it.
+# path params that name an owner
+# not exhaustive, unscoped ops get reported for review
 SCOPE_KEYWORDS = (
     "owner", "org", "account", "tenant", "workspace", "customer", "user", "repo",
     "project", "enterprise", "installation", "client_id", "team", "group", "namespace",
@@ -61,13 +55,13 @@ class Operation:
     method: str
     path: str
     summary: str
-    capability: str          # the tag - the domain grouping the API's own authors chose
-    resource: str            # the first concrete path segment: repos, issues, users
+    capability: str          # API tag
+    resource: str            # first path segment
     reads: bool
     writes: bool
     destructive: bool
     sensitive: bool
-    scope_params: tuple[str, ...]   # path params that identify *whose* data this is
+    scope_params: tuple[str, ...]   # owner path params
 
     @property
     def risk(self) -> str:
@@ -200,8 +194,7 @@ def analyse(spec: dict[str, Any], max_tools: int = 40) -> tuple[list[Capability]
     for o in ops:
         risk[o.risk] += 1
     scoped = sum(1 for o in ops if o.scope_params)
-    # A write with no owner in its path is the interesting case: nothing in the request
-    # says whose data it touches, so scope has to come from the credential instead.
+    # no owner in the path, scope has to come from the credential
     unscoped_writes = sum(1 for o in ops if o.writes and not o.scope_params)
     return caps, ConnectorReport(
         title=(spec.get("info") or {}).get("title", "unknown"),
@@ -214,7 +207,7 @@ def analyse(spec: dict[str, Any], max_tools: int = 40) -> tuple[list[Capability]
     )
 
 
-# --- generated artefacts ---------------------------------------------------------
+# generated artefacts
 
 def tool_definitions(caps: list[Capability]) -> list[dict[str, Any]]:
     """MCP-shaped tool definitions, one per capability."""

@@ -27,8 +27,7 @@ dev = ["pytest>=8", "ruff>=0.5"]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-# agentnorm lives in this repo as a separate distribution; installed from the path so the
-# reference deployment always builds against the working tree rather than a release.
+# agentnorm installed from the local path
 [tool.uv.sources]
 agentnorm = { path = "packages/agentnorm" }
 
@@ -40,9 +39,7 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-# An explicit, conventional selection: pycodestyle errors, pyflakes, import order,
-# pyupgrade and bugbear. Deliberately not the everything-set - a lint gate that reports
-# stylistic preferences alongside real defects trains people to ignore it.
+# standard rule set: E, F, I, UP, B
 select = ["E", "F", "I", "UP", "B"]
 ignore = [
     "E501",  # line length is enforced by the formatter, not the linter

@@ -78,7 +78,7 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
     docs = load_documents()
     queries = load_benchmark()
 
-    # Cap per source so one family does not dominate the aggregate purely by count.
+    # cap per source
     by_source: dict[str, list[Query]] = {}
     for q in queries:
         by_source.setdefault(q.source, []).append(q)
@@ -87,8 +87,7 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
         sampled.extend(qs[:limit_per_source])
 
     doc_ids = {d.doc_id for d in docs}
-    # A query whose gold answer is not in the corpus is unanswerable and would depress
-    # every strategy equally while measuring nothing.
+    # skip queries whose answer isn't in the corpus
     sampled = [
         Query(q.query_id, q.text, q.gold_doc_ids & doc_ids, q.source)
         for q in sampled
@@ -100,7 +99,7 @@ def run(limit_per_source: int = 150, use_dense: bool = True) -> dict[str, Any]:
         from sentinel.rag.embed import VectorStore
 
         store = VectorStore()
-        # Embed every benchmark query up front, in as few requests as possible.
+        # embed all queries up front
         store.warm([q.text for q in sampled])
         dense = DenseRetriever(store)
         retrievers.append(dense)

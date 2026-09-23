@@ -33,8 +33,7 @@ async def main() -> None:
     )
     print(f"started {handle.id}")
 
-    # Give the workflow a moment to reach the gate before signalling, so the signal
-    # lands on a workflow that is actually waiting rather than racing the start.
+    # wait for the workflow to reach the gate before signalling
     await asyncio.sleep(3)
     print(f"stage: {await handle.query(RemediationWorkflow.stage)}")
 

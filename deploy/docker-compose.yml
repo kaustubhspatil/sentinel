@@ -1,12 +1,7 @@
-# Sentinel backbone.
-#
-# Every port binds to 127.0.0.1 deliberately: nothing here is reachable from the
-# internet, and access is over an SSH tunnel. The host runs on preemptible capacity,
-# so all state lives under /srv/sentinel on the persistent disk - a preemption is a
-# restart, never a rebuild.
-#
-# Memory is the binding constraint (8 GB box), so each service is explicitly capped
-# rather than left to discover the limit by being OOM-killed.
+# Sentinel backbone
+# all ports on 127.0.0.1, access via SSH tunnel
+# state lives in /srv/sentinel so a preemption is just a restart
+# memory limits set per service (8 GB box)
 
 name: sentinel
 

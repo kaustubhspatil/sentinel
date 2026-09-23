@@ -120,9 +120,7 @@ def match_release(release: str = "noble") -> MatchStats:
                 if hit:
                     stats.vulnerable_installs += 1
 
-            # Drop the earlier low-confidence edges for this host before writing the
-            # version-aware ones, so a stale heuristic claim cannot survive alongside
-            # a real measurement.
+            # remove old heuristic edges before writing version-aware ones
             removed = s.run(
                 """
                 MATCH (:Host {id: $host})-[:RUNS]->(:PackageInstall)

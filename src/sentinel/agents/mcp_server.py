@@ -34,8 +34,7 @@ mcp = MCPServer("sentinel")
 
 MAX_LIMIT = 100
 
-# Labels an agent may address. An allowlist rather than free-form: it keeps a
-# hallucinated label from silently returning an empty result that reads as "no exposure".
+# allowlist so a made-up label doesn't return an empty result
 ENTITY_KINDS = {
     "Host": ("id", ["hostname", "tenant_id", "provider", "role", "os_release", "address"]),
     "Customer": ("id", ["name", "tenant_id"]),

@@ -14,26 +14,26 @@ from sentinel.util.debver import compare, is_older, parse
 @pytest.mark.parametrize(
     "lower,higher",
     [
-        # Ordinary numeric ordering
+        # numeric ordering
         ("1.0", "1.1"),
         ("1.9", "1.10"),
         ("2.2", "10.0"),
-        # Leading zeros are insignificant
+        # leading zeros
         ("1.007", "1.8"),
-        # Revisions
+        # revisions
         ("1.0-1", "1.0-2"),
         ("1.0-1", "1.0-10"),
-        # Epochs dominate everything
+        # epochs
         ("2.0", "1:1.0"),
         ("1:1.0", "2:0.1"),
-        # '~' sorts before end-of-string: pre-releases and backports
+        # '~' sorts first
         ("1.0~rc1", "1.0"),
         ("1.0~beta", "1.0~rc1"),
         ("1.0-1~bpo12+1", "1.0-1"),
-        # Letters sort before other characters
+        # letters before other chars
         ("1.0a", "1.0b"),
         ("1.0a", "1.0+"),
-        # Real Ubuntu security updates
+        # real ubuntu updates
         ("3.0.13-0ubuntu3.4", "3.0.13-0ubuntu3.5"),
         ("1:9.6p1-3ubuntu13.5", "1:9.6p1-3ubuntu13.11"),
         ("2.43-1ubuntu2.3", "2.43-1ubuntu2.4"),
@@ -75,7 +75,7 @@ def test_trailing_hyphen_is_invalid() -> None:
         ("1.0", (0, "1.0", "")),
         ("1:2.3-4", (1, "2.3", "4")),
         ("2.43-1ubuntu2.4", (0, "2.43", "1ubuntu2.4")),
-        # Upstream versions may themselves contain hyphens; the last one wins.
+        # last hyphen splits the revision
         ("1.0-beta-3", (0, "1.0-beta", "3")),
     ],
 )

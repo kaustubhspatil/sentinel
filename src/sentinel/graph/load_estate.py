@@ -118,9 +118,7 @@ def load(path: Path | None = None) -> EstateStats:
                     stats.sites += 1
 
         for host in hosts:
-            # Fail loudly on a dangling reference rather than silently creating an
-            # orphan Site or Zone - a host in a zone that does not exist would make
-            # every blast-radius answer quietly wrong.
+            # fail on dangling refs
             if host.get("site") not in known_sites:
                 stats.errors.append(f"{host['id']}: unknown site {host.get('site')!r}")
                 continue

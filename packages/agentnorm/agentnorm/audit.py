@@ -39,7 +39,7 @@ from agentnorm.trace import Run, ToolCall
 
 SPEC = "draft-sharif-agent-audit-trail-00"
 
-# Action types from the draft's controlled vocabulary.
+# action types
 ACTION_TYPES = frozenset(
     {"tool_call", "tool_response", "decision", "delegation", "escalation", "error", "lifecycle"}
 )
@@ -127,8 +127,7 @@ class AuditChain:
             "prev_hash": self._prev_hash,
             "recording_component": self.recording_component,
         }
-        # "under whose authority" - the regulator's question. Carried on every record
-        # rather than inferred from a session lookup that may not survive retention.
+        # who authorised this, stored on every record
         if principal:
             record["principal"] = principal
         if human_override:
@@ -301,8 +300,7 @@ class AuditLog:
         self.chain = AuditChain(
             recording_component=recording_component or f"agentnorm/{SPEC}"
         )
-        # Resume an existing chain so restarts do not silently start a second one, which
-        # would verify cleanly on its own and hide the discontinuity.
+        # resume the existing chain instead of starting a new one
         existing = list(self.read())
         if existing:
             self.chain.records = existing

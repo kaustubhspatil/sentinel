@@ -31,8 +31,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-# Mapping to OpenTelemetry GenAI semantic conventions. Kept in one place so an exporter
-# can be written without touching the recorder.
+# OpenTelemetry GenAI attribute names
 OTEL_ATTRS = {
     "agent": "gen_ai.agent.name",
     "version": "gen_ai.agent.version",
@@ -53,12 +52,11 @@ class ToolCall:
     duration_ms: int = 0
     result_size: int = 0
     output_bytes: int = 0
-    # What this call actually touched. `scope` is the entitlement the resource belongs
-    # to; comparing it against the run's principal is how escalation is detected.
+    # scope is compared against the run's principal to catch escalation
     resource: str = ""
     scope: str = ""
     started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    # Monotonic start, used only to compute duration. Excluded from serialisation.
+    # for duration only, not serialised
     _started: float | None = field(default=None, repr=False, compare=False)
 
 
@@ -69,11 +67,11 @@ class Run:
     agent: str
     version: str = "unversioned"
     principal: str = ""
-    actor_kind: str = "agent"  # 'agent' | 'human' - never pooled together
+    actor_kind: str = "agent"  # 'agent' or 'human'
     run_id: str = field(default_factory=lambda: uuid.uuid4().hex)
     calls: list[ToolCall] = field(default_factory=list)
     started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    label: str = ""          # set only for evaluation data
+    label: str = ""          # eval data only
     is_anomalous: int = -1   # -1 unknown, 0 benign, 1 anomalous
 
     @property

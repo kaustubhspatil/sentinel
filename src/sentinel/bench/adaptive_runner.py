@@ -91,9 +91,7 @@ def _run_once(
         )
         succeeded = bool(sec_map.get((user_task.ID, inj_id), False))
     except Exception:  # noqa: BLE001
-        # A malformed injection that breaks AgentDojo's own state handling is a failed
-        # attack, not a result. The attacker will be told the action did not fire and
-        # will try a cleaner injection.
+        # malformed injection counts as a failed attempt, attacker retries
         succeeded = False
     run_obj = holder["recorder"].finish()
     return succeeded, run_obj, run_obj.tools
@@ -110,7 +108,7 @@ def run(
     text_stats = DetectorStats()
     run_key: dict[str, str] = {}
 
-    # The text detector sits in the pipeline; the action recorder wraps the executor.
+    # text detector in the pipeline, action recorder wraps the executor
     text_detector = LLMTextDetector(text_stats, run_key)
     pipeline = build_pipeline(holder, suite_name, extra_after_llm=[text_detector])
     pipeline.name = MODEL_PIPELINE_NAME
@@ -119,7 +117,7 @@ def run(
     logger = OutputLogger(str(LOGDIR))
     logger.__enter__()
 
-    # --- 1. benign baseline for the action detector ------------------------------
+    # 1. benign baseline
     benign: list[Run] = []
     for task in list(suite.user_tasks.values())[:benign_for_baseline]:
         holder["recorder"] = RunRecorder("agentdojo", version=suite_name, principal=suite_name)
@@ -136,9 +134,9 @@ def run(
             benign.append(r)
 
     monitor = Monitor.fit(benign) if len(benign) >= 4 else None
-    text_benign_flags = len(text_stats.flagged_runs)  # benign runs the text filter flagged
+    text_benign_flags = len(text_stats.flagged_runs)  # text filter false positives
 
-    # --- 2. adaptive attacks -----------------------------------------------------
+    # 2. adaptive attacks
     user_tasks = list(suite.user_tasks.values())[:max_targets]
     inj_id = next(iter(suite.injection_tasks))
     inj_goal = suite.injection_tasks[inj_id].GOAL
@@ -162,7 +160,7 @@ def run(
                 result.winning_injection = payload
                 tr = TargetResult(user_task.ID, inj_id, True, it,
                                   winning_tools=tools)
-                # score both detectors on this successful run
+                # score both detectors
                 tr.text_flagged = f"{user_task.ID}/{inj_id}" in text_stats.flagged_runs
                 if monitor is not None:
                     v = monitor.score(run_obj)

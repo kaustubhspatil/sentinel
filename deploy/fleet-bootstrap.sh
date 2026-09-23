@@ -1,16 +1,7 @@
 #!/usr/bin/env bash
 # Turn a bare Linux host into a managed endpoint.
-#
-# Installs the two signals an RMM actually needs:
-#   node_exporter - resource telemetry (the "is it healthy" question)
-#   osquery       - inventory and behaviour: installed packages, logins, listening
-#                   ports, processes (the "what is it and who touched it" question)
-# and Grafana Alloy to ship both off-box, so a preempted or destroyed node does not
-# take its own history with it.
-#
-# Package inventory matters beyond monitoring: it is the join key from a host to the
-# CVE graph. Without osquery's deb_packages the vulnerability side of the ontology has
-# nothing to attach to.
+# installs node_exporter (metrics), osquery (inventory) and Alloy (ships both off-box)
+# deb_packages from osquery is what links hosts to CVEs
 #
 # Usage: TENANT=acme GRAFANA_* ... bash fleet-bootstrap.sh
 set -euo pipefail
@@ -37,12 +28,9 @@ if ! command -v osqueryd >/dev/null 2>&1; then
   sudo -E apt-get install -y -qq osquery
 fi
 
-# Scheduled queries are differential by default: the first execution stores a baseline
-# and logs nothing, so results only appear on the second run. deb_packages is marked
-# snapshot so every execution emits the full inventory - it is the join key to the CVE
-# graph and must not arrive as a diff. Its interval is 900s during build-out for a
-# workable feedback loop; 3600s is the sane production value.
-# (Comment kept out of the JSON below: osquery's config is parsed as strict JSON.)
+# deb_packages is a snapshot query so we always get the full list (it's the CVE join key)
+# 900s interval for now, 3600s for prod
+# (comment lives here because osquery config is strict JSON)
 log "osquery schedule"
 sudo mkdir -p /etc/osquery /var/log/osquery
 sudo tee /etc/osquery/osquery.conf >/dev/null <<OSQ
@@ -154,11 +142,7 @@ loki.write "cloud" {
 }
 ALLOY
 
-# Alloy runs as its own user, and osquery writes its result log 0600 root:root by
-# default - so the log ships nothing and fails silently. logger_mode above fixes new
-# files; this handles a log that already exists from a previous run.
-# logger_mode only applies when osquery creates the file, so existing logs keep their
-# original 0640 root:root and stay unreadable to Alloy. Fix both cases.
+# osquery log defaults to 0600/0640 root, fix perms so Alloy can read it
 sudo chmod 0644 /var/log/osquery/*.log 2>/dev/null || true
 
 sudo systemctl enable --now alloy

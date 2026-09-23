@@ -83,9 +83,7 @@ class Session:
 
     def wrap_one(self, name: str, fn: Callable[..., Any]) -> Callable[..., Any]:
         def wrapped(*args: Any, **kwargs: Any) -> Any:
-            # Positional arguments are recorded by index. Tool protocols are almost
-            # always keyword-based, and inspecting signatures to name them would add a
-            # failure mode for no real benefit.
+            # positional args recorded by index
             recorded = {**{str(i): a for i, a in enumerate(args)}, **kwargs}
             with self._rec.tool_call(name, recorded) as call:
                 result = fn(*args, **kwargs)

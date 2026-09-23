@@ -56,9 +56,7 @@ class LLMTextDetector(PromptInjectionDetector):
     """Flags a tool output that appears to contain instructions for the agent."""
 
     def __init__(self, stats: DetectorStats, run_key: dict[str, str]) -> None:
-        # 'message' mode: judge each tool output on its own, which is how these are
-        # deployed. raise_on_injection stays False - this baseline only reports, so the
-        # comparison is detection-versus-detection rather than detection-versus-blocking.
+        # 'message' mode, report only (no raising)
         super().__init__(mode="message", raise_on_injection=False)
         self.stats = stats
         self.run_key = run_key
@@ -73,8 +71,7 @@ class LLMTextDetector(PromptInjectionDetector):
             max_tokens=1024,
         )
         if not resp.ok:
-            # An unavailable judge is not a clean verdict. Counted, and treated as "no
-            # detection" so the baseline is never credited for a call it could not make.
+            # judge unavailable = no detection
             self.stats.llm_errors += 1
             return False, 0.0
 

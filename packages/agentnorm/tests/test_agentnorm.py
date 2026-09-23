@@ -40,7 +40,7 @@ def benign_population(n=200, seed=3) -> list[Run]:
     return runs
 
 
-# --- recording -------------------------------------------------------------------
+# recording
 
 def test_recorder_captures_order_and_timing():
     rec = RunRecorder(agent="a", version="v1")
@@ -69,7 +69,7 @@ def test_run_key_separates_versions():
     assert make_run(version="v1").key != make_run(version="v2").key
 
 
-# --- cold start ------------------------------------------------------------------
+# cold start
 
 def test_unseen_agent_does_not_alert_on_every_tool():
     """The regression that made the suite useless: novel_tool firing on 100% of runs."""
@@ -98,7 +98,7 @@ def test_genuinely_novel_tool_still_detected_for_known_agent():
     assert verdict.scores["novel_tool"] >= 1.0
 
 
-# --- detection -------------------------------------------------------------------
+# detection
 
 def test_scope_violation_needs_no_history():
     """An assertion, not a statistic: it must fire on the first run it ever sees."""
@@ -125,7 +125,7 @@ def test_benign_run_is_not_flagged():
     assert flagged <= 4, f"{flagged}/40 benign runs flagged - false positive rate too high"
 
 
-# --- calibration honesty ---------------------------------------------------------
+# calibration
 
 def test_thin_calibration_set_warns_rather_than_lying():
     """A 0.2% quantile cannot be estimated from a handful of runs; say so."""
@@ -138,7 +138,7 @@ def test_budget_is_split_across_detectors():
     """Five detectors at the suite budget each would union to five times the budget."""
     monitor = Monitor.fit(benign_population(), budget=0.05)
     assert monitor.budget == 0.05
-    # thresholds exist for every detector that produced finite scores
+    # every detector with finite scores gets a threshold
     assert set(monitor.thresholds) == set(DetectorSuite.NAMES)
 
 
@@ -153,7 +153,7 @@ def test_empty_fit_is_rejected():
         Monitor.fit([])
 
 
-# --- learned scope ownership -----------------------------------------------------
+# scope ownership
 
 def opaque_run(principal: str, scopes: list[str]) -> Run:
     """Scopes are opaque ids (a VPC, a workspace) - never a copy of the principal name."""
@@ -185,7 +185,7 @@ def test_unknown_scope_falls_back_to_direct_comparison():
     assert suite.score(opaque_run("acme", ["never-seen"]))["scope"].value == 1.0
 
 
-# --- sequence suppression --------------------------------------------------------
+# sequence suppression
 
 def test_sequence_is_suppressed_for_an_unseen_agent():
     """Transition structure is agent-specific; pooling it alerted on 100% of benign runs."""

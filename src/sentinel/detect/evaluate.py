@@ -20,12 +20,9 @@ from agentnorm.trace import Run
 
 from sentinel.store.agentnorm_store import ClickHouseStore
 
-FPR_BUDGET = 0.01  # target false-positive rate for the SUITE, not per detector
+FPR_BUDGET = 0.01  # FP budget for the whole suite
 
-# Four independent detectors each firing on 1% of benign runs gives a union near 4%, not
-# 1%. The first run of this measured 5.8% against a "1%" budget for exactly that reason.
-# Splitting the budget across detectors (a Bonferroni-style correction) makes the number
-# the operator actually experiences match the number that was promised.
+# split the budget across detectors (bonferroni) so the union stays near target
 N_DETECTORS = 5
 PER_DETECTOR_BUDGET = FPR_BUDGET / N_DETECTORS
 
@@ -69,8 +66,7 @@ def evaluate(seed: int = 11, prior_strength: float | None = None) -> dict[str, A
     if not benign or not anomalous:
         raise RuntimeError("no labelled traces - run: python -m sentinel.detect.scenarios")
 
-    # Split benign into fit / calibrate / test. Thresholds come from calibrate; the
-    # false-positive rate is measured on test, which the threshold has never seen.
+    # fit / calibrate / test split
     rng = random.Random(seed)
     rng.shuffle(benign)
     n = len(benign)
@@ -104,8 +100,7 @@ def evaluate(seed: int = 11, prior_strength: float | None = None) -> dict[str, A
             name, thr, tp, fp, fn, {k: (v[0], v[1]) for k, v in by_scenario.items()}
         )
 
-    # Union: any detector firing. Reported separately because the suite's value is
-    # coverage across failure modes, not any single detector's score.
+    # union = any detector fires
     union_fp = sum(
         1 for r in test_benign if any(suite.score(r)[k].value > thresholds[k] for k in thresholds)
     )

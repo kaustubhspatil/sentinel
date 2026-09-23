@@ -22,10 +22,7 @@ from sentinel.graph.client import session
 
 BATCH = 1000
 
-# Debian package names that map to a KEV vendor/product with reasonable confidence.
-# Deliberately small and explicit: a fuzzy match over 600 package names against 1,685
-# KEV entries produces mostly noise, and noise in a vulnerability graph is worse than
-# a gap, because it gets acted on.
+# hand-picked debian -> KEV mappings, fuzzy matching was too noisy
 KEV_PRODUCT_HINTS: dict[str, tuple[str, str]] = {
     "openssl": ("OpenSSL", "OpenSSL"),
     "openssh-server": ("OpenBSD", "OpenSSH"),
@@ -125,9 +122,7 @@ def load_host_inventory(host_id: str, rows: list[dict], stats: InventoryStats) -
                 tenant=tenant,
             )
 
-        # Candidate CVE exposure. Recorded with match_method so it can be re-derived
-        # once CPE matching exists - and so a downstream consumer can filter on
-        # confidence rather than trusting every edge equally.
+        # store match_method so edges can be filtered by confidence
         hints = [
             {"pkg": pkg, "vendor": vendor, "product": product}
             for pkg, (vendor, product) in KEV_PRODUCT_HINTS.items()

@@ -35,8 +35,7 @@ def load_file(path: Path) -> int:
     data = [(as_of, r["cve"], float(r["epss"]), float(r["percentile"])) for r in rows]
 
     c = client()
-    # ReplacingMergeTree ordered by (cve_id, as_of): re-running a day overwrites rather
-    # than duplicating, so a retried Actions run cannot corrupt the series.
+    # ReplacingMergeTree so reruns overwrite
     c.insert(
         "epss_scores",
         data,

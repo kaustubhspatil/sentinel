@@ -26,7 +26,7 @@ def op(method="get", tags=("things",), summary="does a thing", op_id=None):
                      "summary": summary}}
 
 
-# --- semantics derived from the spec ---------------------------------------------
+# spec semantics
 
 @pytest.mark.parametrize("method,writes,destructive", [
     ("get", False, False), ("head", False, False),
@@ -61,7 +61,7 @@ def test_sensitive_write_is_high_risk():
     assert o.risk == "high"
 
 
-# --- scope derivation -------------------------------------------------------------
+# scope
 
 def test_owner_parameters_are_scope_but_item_ids_are_not():
     o = parse(spec({"/repos/{owner}/{repo}/issues/{issue_number}": op()}))[0]
@@ -85,7 +85,7 @@ def test_resource_is_the_first_concrete_segment():
     assert parse(spec({"/{version}/users": op()}))[0].resource == "users"
 
 
-# --- grouping ---------------------------------------------------------------------
+# grouping
 
 def test_grouping_bounds_the_tool_count():
     paths = {f"/r{i}": op("get", tags=(f"tag{i}",), op_id=f"o{i}") for i in range(200)}
@@ -114,7 +114,7 @@ def test_tool_description_names_operations_and_risk():
     assert d["inputSchema"]["required"] == ["operation_id"]
 
 
-# --- the monitoring policy the generator hands to agentnorm -----------------------
+# monitoring policy for agentnorm
 
 def test_policy_derives_scope_parameters_and_destructive_set():
     ops = parse(spec({

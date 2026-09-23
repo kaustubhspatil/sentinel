@@ -34,8 +34,7 @@ class LLMResponse:
     output_tokens: int = 0
     latency_ms: int = 0
     finish_reason: str = ""
-    # True when this came from a fallback rather than the requested provider, so the
-    # eval harness can separate "the model was worse" from "we were served by another".
+    # set when a fallback provider answered
     fell_back: bool = False
     error: str = ""
 
@@ -57,8 +56,7 @@ class ModelSpec:
     model: str
     input_per_mtok: float
     output_per_mtok: float
-    # Rough capability tier used for routing: "small" for classification and extraction,
-    # "large" for reasoning that has to be right.
+    # "small" for classification/extraction, "large" for reasoning
     tier: str = "small"
 
     def cost_usd(self, input_tokens: int, output_tokens: int) -> float:

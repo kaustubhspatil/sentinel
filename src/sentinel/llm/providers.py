@@ -189,11 +189,7 @@ class AzureOpenAIProvider:
             "max_tokens": kwargs.get("max_tokens", 1024),
         }
 
-        # Retry the same deployment before giving up. A GlobalStandard deployment is
-        # served from several regions and returns intermittent 404s while a capacity
-        # change propagates - the identical request succeeds on the next attempt. Falling
-        # straight through to another provider on a transient status wastes the one
-        # provider that works and, worse, reports the *fallback's* error as the failure.
+        # retry the same deployment first, GlobalStandard gives transient 404s
         t = Timer()
         last_exc: Exception | None = None
         for attempt in range(3):
@@ -226,12 +222,7 @@ class AzureOpenAIProvider:
         text = (choice.get("message") or {}).get("content") or ""
         finish = choice.get("finish_reason", "")
 
-        # A 200 response with empty content and non-zero completion tokens is the
-        # signature of a reasoning model spending the whole budget on hidden reasoning
-        # tokens. It is a failure, but it does not look like one: nothing raises, usage
-        # is reported, and only the text is missing. Naming it here stops the router
-        # from silently falling through to another provider and reporting that provider's
-        # error instead of this one.
+        # empty content with completion tokens = reasoning model used the whole budget
         err = ""
         if not text.strip():
             err = (

@@ -19,7 +19,7 @@ import httpx
 from sentinel.config import settings
 
 NOTICES_URL = "https://ubuntu.com/security/notices.json"
-# The API caps page size at 20 and returns 422 above it.
+# max page size 20 (422 above)
 PAGE = 20
 TIMEOUT = httpx.Timeout(60.0, connect=15.0)
 RETRYABLE = {429, 500, 502, 503, 504}
@@ -69,9 +69,7 @@ def fetch(release: str = "noble", out_dir: Path | None = None) -> UsnFetch:
         while True:
             payload = _get_page(c, release, offset)
             if payload is None:
-                # Record the gap and keep going: a partial catalogue with a known
-                # hole is far more useful than no catalogue, as long as the hole is
-                # reported rather than hidden.
+                # log the gap and continue
                 missed.append(offset)
                 offset += PAGE
                 if total is not None and offset >= total:
@@ -88,8 +86,7 @@ def fetch(release: str = "noble", out_dir: Path | None = None) -> UsnFetch:
             if offset >= (total or 0):
                 break
 
-    # Keep only what the matcher needs. The full notices carry long prose descriptions
-    # that would triple the file for no downstream use.
+    # keep only what the matcher needs
     slim = [
         {
             "id": n.get("id"),

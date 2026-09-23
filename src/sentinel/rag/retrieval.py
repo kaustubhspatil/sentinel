@@ -28,8 +28,7 @@ from sentinel.graph.client import session
 from sentinel.rag.corpus import Document
 
 TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]*")
-# Identifiers are the highest-signal tokens in this domain, so they are matched whole
-# rather than split on punctuation.
+# keep identifiers whole
 ID_PATTERN = re.compile(r"\b(?:CVE-\d{4}-\d{4,7}|T\d{4}(?:\.\d{3})?|M\d{4})\b", re.I)
 
 
@@ -151,8 +150,7 @@ class HybridRetriever:
 
     def __init__(self, retrievers: list[Retriever], rrf_k: int = 60) -> None:
         self.retrievers = retrievers
-        # 60 is the constant from the original RRF paper. Named rather than inlined
-        # because it is a choice, and the ablation reports sensitivity to it.
+        # RRF constant (from the paper)
         self.rrf_k = rrf_k
 
     def retrieve(self, query: str, k: int = 10) -> list[Hit]:

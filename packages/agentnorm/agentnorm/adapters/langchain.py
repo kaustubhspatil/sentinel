@@ -43,7 +43,7 @@ def _base_class() -> type:
 class AgentNormCallbackHandlerMixin:
     """The recording logic, independent of whether LangChain is installed."""
 
-    # LangChain inspects these on handlers; supplied so a plain object still behaves.
+    # langchain checks these on handlers
     raise_error: bool = False
     run_inline: bool = False
 
@@ -60,7 +60,7 @@ class AgentNormCallbackHandlerMixin:
         self._open: dict[str, ToolCall] = {}
         self._args: dict[str, dict[str, Any]] = {}
 
-    # --- LangChain callback surface ------------------------------------------
+    # langchain callbacks
 
     def on_tool_start(
         self,
@@ -85,9 +85,7 @@ class AgentNormCallbackHandlerMixin:
         key = str(run_id)
         call = self._open.pop(key, None)
         if call is None:
-            # An end without a start means the handler was attached mid-run. Dropping it
-            # is correct: a call with no beginning has no duration and no arguments, and
-            # inventing them would corrupt the baseline it feeds.
+            # end without a start (handler attached mid-run), skip it
             return
         args = self._args.pop(key, {})
         size = int(self._size_of(call.tool, args, output))
@@ -107,7 +105,7 @@ class AgentNormCallbackHandlerMixin:
             call, ok=False, error=f"{type(error).__name__}: {error}"
         )
 
-    # --- results --------------------------------------------------------------
+    # results
 
     def finish(self):
         """Close any calls the framework never ended, then return the run.

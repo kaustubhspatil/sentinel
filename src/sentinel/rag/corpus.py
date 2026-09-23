@@ -51,7 +51,7 @@ class Query:
     query_id: str
     text: str
     gold_doc_ids: set[str] = field(default_factory=set)
-    source: str = ""   # which relation supplied the ground truth
+    source: str = ""   # relation used for ground truth
 
 
 def load_documents() -> list[Document]:
@@ -100,8 +100,7 @@ def load_benchmark(min_query_chars: int = 80) -> list[Query]:
     """Build queries whose ground truth comes from MITRE and CISA, not from us."""
     queries: list[Query] = []
     with session() as s:
-        # A mitigation describes a defence; the technique it defends against is the gold
-        # answer. One mitigation often covers several techniques, so gold is a set.
+        # gold = techniques the mitigation covers
         for r in s.run(
             """
             MATCH (m:Mitigation)-[:MITIGATES]->(t:Technique)
@@ -120,9 +119,7 @@ def load_benchmark(min_query_chars: int = 80) -> list[Query]:
                 source="ATT&CK MITIGATES",
             ))
 
-        # CISA writes a required action per KEV entry, separately from the vulnerability
-        # description. Recovering the CVE from the remediation instruction is a genuine
-        # retrieval task and the pairing is CISA's, not ours.
+        # CISA required action -> CVE
         for r in s.run(
             """
             MATCH (v:Vulnerability)

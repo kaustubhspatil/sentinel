@@ -24,12 +24,7 @@ from sentinel.rag.corpus import Document
 
 MODEL = "text-embedding-3-small"
 DIMS = 1536
-# Batch size is a throughput lever, not a tuning detail. This deployment rejects roughly
-# nine requests in ten with a transient 404, and the rejection is per *request* rather
-# than per document - so packing more documents into each accepted request is the only
-# thing that meaningfully speeds up indexing. Batches are packed by estimated token count
-# rather than a fixed document count, because the API limits tokens per request and the
-# corpus mixes 200-character CVE descriptions with multi-page ATT&CK write-ups.
+# pack batches by token count, the 404s are per request so bigger batches help
 MAX_BATCH_DOCS = 300
 MAX_BATCH_TOKENS = 90_000
 TIMEOUT = httpx.Timeout(120.0, connect=15.0)
@@ -70,13 +65,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     """Embed a batch through Azure OpenAI."""
     endpoint = (settings.azure_openai_endpoint or "").rstrip("/")
     url = f"{endpoint}/openai/deployments/{MODEL}/embeddings"
-    # A freshly created deployment returns 404 for *minutes* while it propagates, and
-    # propagation is per-caller: the same deployment served this laptop while still
-    # 404ing the backbone, and took roughly 2.5 minutes of polling there. Rate limits
-    # appear as 429. Measured on this deployment: roughly one request in seven succeeds
-    # even 40 minutes after creation, and every failure is 404 rather than a rate limit.
-    # The budget is therefore deliberately generous - twenty attempts, capped at 30s
-    # apart - because abandoning a half-finished index costs far more than waiting.
+    # new deployments 404 for a while, so retry generously (20 tries, max 30s apart)
     delay = 3.0
     for attempt in range(20):
         with httpx.Client(timeout=TIMEOUT) as c:
@@ -96,7 +85,7 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
     else:  # pragma: no cover - only on twenty consecutive failures
         r.raise_for_status()
         data = r.json()["data"]
-    # The API may return results out of order; index is authoritative.
+    # sort by index
     return [item["embedding"] for item in sorted(data, key=lambda d: d["index"])]
 
 
@@ -106,7 +95,7 @@ def _pack(docs: list[Document]) -> list[list[Document]]:
     current: list[Document] = []
     tokens = 0
     for d in docs:
-        # ~4 characters per token is close enough for a batching bound.
+        # ~4 chars per token
         cost = min(len(d.content), 8000) // 4 + 1
         if current and (tokens + cost > MAX_BATCH_TOKENS or len(current) >= MAX_BATCH_DOCS):
             batches.append(current)

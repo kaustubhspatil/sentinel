@@ -29,11 +29,11 @@ def load_secrets() -> Path | None:
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(extra="ignore", case_sensitive=False)
 
-    # Paths
+    # paths
     repo_root: Path = Path(__file__).resolve().parents[2]
     data_dir: Path = Field(default_factory=lambda: Path(__file__).resolve().parents[2] / "data")
 
-    # Backbone
+    # backbone
     backbone_host: str | None = None
     backbone_user: str = "azureuser"
 
@@ -46,26 +46,26 @@ class Settings(BaseSettings):
     gcp_region: str = "northamerica-northeast2"
     ollama_host: str = "http://localhost:11434"
 
-    # Graph
+    # graph
     neo4j_uri: str = "bolt://localhost:7687"
     neo4j_user: str = "neo4j"
     neo4j_password: str | None = None
 
-    # Document store / embeddings
+    # docs / embeddings
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_user: str = "sentinel"
     postgres_password: str | None = None
     postgres_db: str = "sentinel"
 
-    # Columnar store
+    # columnar store
     clickhouse_host: str = "localhost"
     clickhouse_port: int = 8123
     clickhouse_user: str = "sentinel"
     clickhouse_password: str | None = None
     clickhouse_db: str = "sentinel"
 
-    # Durable execution
+    # durable execution
     temporal_address: str = "localhost:7233"
     temporal_namespace: str = "default"
 

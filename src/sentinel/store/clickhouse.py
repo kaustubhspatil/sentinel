@@ -21,9 +21,7 @@ DDL = [
     ) ENGINE = ReplacingMergeTree
     ORDER BY (cve_id, as_of)
     """,
-    # Daily snapshots of 366k CVEs accumulate fast, and the interesting signal is
-    # movement, not the level. Partitioning by month keeps drops cheap if we ever
-    # need to age data out.
+    # partition by month
     """
     CREATE TABLE IF NOT EXISTS kev_snapshot (
         as_of        Date,

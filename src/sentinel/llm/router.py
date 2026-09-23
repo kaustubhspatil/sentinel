@@ -40,13 +40,8 @@ PARTITION BY toYYYYMM(ts)
 ORDER BY (purpose, provider, model, ts)
 """
 
-# Prices are USD per million tokens, correct as a snapshot and centralised so there is one
-# place to fix when they change.
-#
-# Provider order here is the outcome of testing what this account can actually reach, not
-# a preference. See docs/llm-providers.md - two of the four intended providers turned out
-# to be unreachable on the credits available, which is exactly the sort of thing that is
-# cheaper to discover now than during an evaluation run.
+# USD per 1M tokens
+# order based on what this account can actually reach, see docs/llm-providers.md
 CATALOGUE: dict[str, list[ModelSpec]] = {
     "small": [
         ModelSpec("azure", "model-router", 0.15, 0.60, "small"),
@@ -66,12 +61,7 @@ def apply_schema() -> None:
     client().command(LLM_DDL)
 
 
-# Deployments that route to a reasoning model spend hidden reasoning tokens out of the
-# same budget as the visible answer. A budget that looks generous for the answer alone
-# can be consumed entirely before a single output character is produced - measured here:
-# max_tokens=150 returned an empty completion with 150 completion tokens billed, while
-# 1200 returned 308 tokens of real output. The floor exists so a caller cannot ask for a
-# budget that is arithmetically incapable of producing an answer.
+# min budget for reasoning models (150 tokens returned nothing, 1200 worked)
 MIN_OUTPUT_TOKENS = 1024
 
 
@@ -86,8 +76,7 @@ class Router:
         specs = list(CATALOGUE.get(tier, CATALOGUE["small"]))
         if prefer:
             specs.sort(key=lambda s: 0 if s.provider == prefer else 1)
-        # Only providers that are actually configured. Attempting an unconfigured
-        # provider would burn an attempt on a certain failure.
+        # configured providers only
         return [s for s in specs if PROVIDERS[s.provider].available()]
 
     def complete(
@@ -116,8 +105,7 @@ class Router:
             if resp.ok and resp.text.strip():
                 return resp
             last = resp
-            # Brief backoff before trying another provider; an immediate retry mostly
-            # rediscovers the same transient failure.
+            # short backoff before the next provider
             time.sleep(0.5 * (attempt + 1))
 
         return last or LLMResponse("", "none", "", error="all providers failed")
@@ -141,7 +129,7 @@ class Router:
                 ],
             )
         except Exception:  # noqa: BLE001
-            # Telemetry must never break the call it is measuring.
+            # don't let telemetry break the call
             pass
 
 

@@ -58,7 +58,7 @@ def fetch_epss(out_dir: Path | None = None) -> FetchResult:
     with _client() as c:
         blob = c.get(EPSS_URL).raise_for_status().content
     text = gzip.decompress(blob).decode("utf-8")
-    # First line is a '#model_version' comment; the header follows.
+    # first line is '#model_version', then the header
     lines = [ln for ln in text.splitlines() if not ln.startswith("#")]
     rows = list(csv.DictReader(io.StringIO("\n".join(lines))))
     path = out_dir / f"epss_{date.today():%Y%m%d}.json"

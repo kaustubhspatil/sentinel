@@ -16,12 +16,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # agentnorm is a sibling distribution in this repo, installed from the path so the
-      # reference deployment always builds against the working tree.
+      # install agentnorm from the local path
       - run: pip install -e ./packages/agentnorm
       - run: pip install -e ".[dev]"
-      # Scoped to tests/ - packages/ is a separate distribution with its own job, and
-      # collecting it here fails on an import the root environment does not have.
+      # only tests/, packages/ has its own job
       - name: Unit tests
         run: pytest tests -q
       - name: Lint
@@ -34,8 +32,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The library claims >=3.10 support and zero dependencies; both are only true
-        # if they are tested.
+        # test the full supported python range with no extra deps
         python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
@@ -63,9 +60,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # The zero-dependency claim is the library's main adoption argument, so it is
-      # enforced rather than asserted in prose. Lazy imports inside functions are how
-      # optional adapters work and are allowed; a module-scope import is not.
+      # check there are no module-level third-party imports (lazy imports are ok)
       - name: Assert no third-party imports at module scope
         working-directory: packages/agentnorm
         run: python tools/check_zero_deps.py
@@ -79,12 +74,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # sentinel depends on agentnorm, which is a sibling in this repo rather than a
-      # release. pip does not read [tool.uv.sources], so the path install is explicit.
+      # pip ignores [tool.uv.sources], so install agentnorm from the path
       - run: pip install -e ./packages/agentnorm
       - run: pip install -e .
-      # The evaluation itself runs on the backbone, which holds the graph and is
-      # reachable only from the operator's IP. CI enforces the committed report's
-      # thresholds, including its age, so a stale pass cannot masquerade as fresh.
+      # eval runs on the backbone, CI just checks the committed report and its age
       - name: Evaluation regression gate
         run: python -m sentinel.eval.gate

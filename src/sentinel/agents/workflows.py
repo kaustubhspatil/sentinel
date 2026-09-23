@@ -29,8 +29,7 @@ with workflow.unsafe.imports_passed_through():
         verify,
     )
 
-# Reads are cheap and idempotent, so retry them freely. Anything that writes gets a
-# tighter policy: retrying a failed write is how you end up with duplicate tickets.
+# retry reads freely, be careful with writes (duplicate tickets)
 READ_RETRY = RetryPolicy(maximum_attempts=5, initial_interval=timedelta(seconds=1))
 WRITE_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds=2))
 
@@ -39,8 +38,7 @@ WRITE_RETRY = RetryPolicy(maximum_attempts=3, initial_interval=timedelta(seconds
 class RemediationInput:
     tenant: str
     limit: int = 10
-    # How long to hold the workflow open waiting for a human. Expiry is a decision
-    # ("nobody approved this") rather than a failure, and is recorded as such.
+    # approval timeout, expiry is recorded as a decision
     approval_timeout_hours: int = 24
 
 
@@ -51,7 +49,7 @@ class RemediationWorkflow:
         self._approver: str = ""
         self._stage: str = "starting"
 
-    # --- signals and queries -------------------------------------------------
+    # signals and queries
 
     @workflow.signal
     async def approve(self, approver: str) -> None:
@@ -68,7 +66,7 @@ class RemediationWorkflow:
         """Lets an operator see where a long-running remediation is without touching it."""
         return self._stage
 
-    # --- the workflow --------------------------------------------------------
+    # workflow
 
     @workflow.run
     async def run(self, params: RemediationInput) -> dict[str, Any]:
@@ -130,10 +128,7 @@ class RemediationWorkflow:
                 return {"tenant": params.tenant, "outcome": "rejected",
                         "ticket": ticket["ticket_id"], "approver": self._approver}
 
-        # Execution of the upgrade itself is intentionally not wired up yet. The
-        # approval gate, the audit trail and the verification loop are what needed
-        # proving first; an agent that can mutate production before its guardrails are
-        # measured is the thing this project argues against.
+        # TODO: actual upgrade execution not wired up yet
         self._stage = "verifying"
         verification = await workflow.execute_activity(
             verify,

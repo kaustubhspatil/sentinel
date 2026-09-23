@@ -109,8 +109,7 @@ def load_kev(stats: LoadStats) -> None:
 
 def _attack_objects() -> list[dict]:
     bundle = json.loads(_latest("attack_enterprise").read_text(encoding="utf-8"))
-    # Revoked and deprecated objects stay in the bundle for provenance; loading them
-    # would let an agent reason from retired doctrine.
+    # skip revoked/deprecated objects
     return [
         o
         for o in bundle.get("objects", [])

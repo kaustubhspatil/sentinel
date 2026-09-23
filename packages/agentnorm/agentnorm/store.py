@@ -34,11 +34,8 @@ def _encode(run: Run) -> str:
     d["started_at"] = run.started_at.isoformat()
     for call, raw in zip(run.calls, d["calls"], strict=True):
         raw["started_at"] = call.started_at.isoformat()
-        raw.pop("_started", None)   # monotonic timing slot, not part of the format
-        # Arguments are recorded for post-hoc analysis, but they are the most likely
-        # place for secrets and personal data to appear. Anything unserialisable is
-        # stringified rather than dropped, so a trace never fails to persist because a
-        # tool returned an exotic type.
+        raw.pop("_started", None)   # timing only, not serialised
+        # stringify anything that can't be serialised so the trace always saves
         raw["args"] = {k: _safe(v) for k, v in raw["args"].items()}
     return json.dumps(d, separators=(",", ":"))
 
@@ -89,9 +86,7 @@ class JsonlStore:
                 try:
                     yield _decode(line)
                 except (json.JSONDecodeError, TypeError, ValueError):
-                    # A truncated final line from an interrupted write costs one run,
-                    # not the file. Silently skipping it is the right trade for an
-                    # append-only log.
+                    # skip a truncated last line from an interrupted write
                     continue
 
     def read(self, *, agent: str | None = None, limit: int | None = None) -> list[Run]:
