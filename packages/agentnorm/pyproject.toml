@@ -1,6 +1,6 @@
 [project]
 name = "agentnorm"
-version = "0.1.0"
+version = "0.2.0"
 description = "Behavioural monitoring for AI agents: runtime baselines, scope enforcement and cold-start-safe anomaly detection."
 readme = "README.md"
 requires-python = ">=3.10"

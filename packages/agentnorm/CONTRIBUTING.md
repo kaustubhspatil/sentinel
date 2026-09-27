@@ -25,7 +25,7 @@ rather than to add it.
 
 ```bash
 pip install -e ".[dev]"
-pytest                          # 71 tests
+pytest                          # 122 tests
 ruff check .
 python tools/check_zero_deps.py
 ```

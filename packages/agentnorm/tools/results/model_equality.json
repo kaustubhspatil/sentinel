@@ -1,0 +1,838 @@
+{
+ "alpha": 0.05,
+ "reps": 500,
+ "permutations": 999,
+ "comparisons": {
+  "sonnet-4-6/dense+rerank vs nova-pro/dense+rerank": {
+   "kind": "different model",
+   "corpus_digest": "31ecf4255fbc",
+   "retrievers": [
+    "dense+rerank",
+    "dense+rerank"
+   ],
+   "pool": 99,
+   "identical_outputs": 4,
+   "full_pool": {
+    "paired": {
+     "n": 99,
+     "p_value": 0.001,
+     "statistic": 0.55437
+    },
+    "unpaired": {
+     "n": 99,
+     "p_value": 0.001,
+     "statistic": 0.55437
+    }
+   },
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 497,
+      "n": 500,
+      "rate": 0.994,
+      "ci95": [
+       0.9826,
+       0.9988
+      ]
+     },
+     "20": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     },
+     "50": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 225,
+      "n": 500,
+      "rate": 0.45,
+      "ci95": [
+       0.4058,
+       0.4948
+      ]
+     },
+     "10": {
+      "rejected": 466,
+      "n": 500,
+      "rate": 0.932,
+      "ci95": [
+       0.9063,
+       0.9525
+      ]
+     },
+     "20": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     },
+     "50": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     }
+    }
+   }
+  },
+  "haiku-4-5/dense+rerank vs nova-lite/dense+rerank": {
+   "kind": "different model",
+   "corpus_digest": "178ba67368a0",
+   "retrievers": [
+    "dense+rerank",
+    "dense+rerank"
+   ],
+   "pool": 102,
+   "identical_outputs": 22,
+   "full_pool": {
+    "paired": {
+     "n": 102,
+     "p_value": 0.001,
+     "statistic": 0.18066
+    },
+    "unpaired": {
+     "n": 102,
+     "p_value": 0.001,
+     "statistic": 0.18066
+    }
+   },
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 233,
+      "n": 500,
+      "rate": 0.466,
+      "ci95": [
+       0.4216,
+       0.5108
+      ]
+     },
+     "20": {
+      "rejected": 480,
+      "n": 500,
+      "rate": 0.96,
+      "ci95": [
+       0.9389,
+       0.9754
+      ]
+     },
+     "50": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 13,
+      "n": 500,
+      "rate": 0.026,
+      "ci95": [
+       0.0139,
+       0.0441
+      ]
+     },
+     "10": {
+      "rejected": 59,
+      "n": 500,
+      "rate": 0.118,
+      "ci95": [
+       0.0911,
+       0.1496
+      ]
+     },
+     "20": {
+      "rejected": 258,
+      "n": 500,
+      "rate": 0.516,
+      "ci95": [
+       0.4712,
+       0.5606
+      ]
+     },
+     "50": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     }
+    }
+   }
+  },
+  "nova-lite/dense vs nova-pro/dense+rerank": {
+   "kind": "different model, retriever also differs",
+   "corpus_digest": "31ecf4255fbc",
+   "retrievers": [
+    "dense",
+    "dense+rerank"
+   ],
+   "pool": 103,
+   "identical_outputs": 29,
+   "full_pool": {
+    "paired": {
+     "n": 103,
+     "p_value": 0.001,
+     "statistic": 0.09362
+    },
+    "unpaired": {
+     "n": 103,
+     "p_value": 0.001,
+     "statistic": 0.09362
+    }
+   },
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 122,
+      "n": 500,
+      "rate": 0.244,
+      "ci95": [
+       0.207,
+       0.2841
+      ]
+     },
+     "20": {
+      "rejected": 295,
+      "n": 500,
+      "rate": 0.59,
+      "ci95": [
+       0.5455,
+       0.6335
+      ]
+     },
+     "50": {
+      "rejected": 500,
+      "n": 500,
+      "rate": 1.0,
+      "ci95": [
+       0.9926,
+       1.0
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 7,
+      "n": 500,
+      "rate": 0.014,
+      "ci95": [
+       0.0056,
+       0.0286
+      ]
+     },
+     "10": {
+      "rejected": 16,
+      "n": 500,
+      "rate": 0.032,
+      "ci95": [
+       0.0184,
+       0.0514
+      ]
+     },
+     "20": {
+      "rejected": 55,
+      "n": 500,
+      "rate": 0.11,
+      "ci95": [
+       0.0839,
+       0.1408
+      ]
+     },
+     "50": {
+      "rejected": 366,
+      "n": 500,
+      "rate": 0.732,
+      "ci95": [
+       0.6909,
+       0.7704
+      ]
+     }
+    }
+   }
+  },
+  "haiku-4-5/dense+rerank vs haiku-4-5/dense+rerank+decompose": {
+   "kind": "same model, pipeline differs",
+   "corpus_digest": "178ba67368a0",
+   "retrievers": [
+    "dense+rerank",
+    "dense+rerank+decompose"
+   ],
+   "pool": 109,
+   "identical_outputs": 100,
+   "full_pool": {
+    "paired": {
+     "n": 109,
+     "p_value": 0.288,
+     "statistic": 0.00025
+    },
+    "unpaired": {
+     "n": 109,
+     "p_value": 1.0,
+     "statistic": 0.00025
+    }
+   },
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "20": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "50": {
+      "rejected": 2,
+      "n": 500,
+      "rate": 0.004,
+      "ci95": [
+       0.0005,
+       0.0144
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "20": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "50": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     }
+    }
+   }
+  },
+  "haiku-4-5/dense+rerank vs haiku-4-5/dense+llmrerank+decompose": {
+   "kind": "same model, pipeline differs",
+   "corpus_digest": "178ba67368a0",
+   "retrievers": [
+    "dense+rerank",
+    "dense+llmrerank+decompose"
+   ],
+   "pool": 108,
+   "identical_outputs": 66,
+   "full_pool": {
+    "paired": {
+     "n": 108,
+     "p_value": 0.552,
+     "statistic": 0.00166
+    },
+    "unpaired": {
+     "n": 108,
+     "p_value": 1.0,
+     "statistic": 0.00166
+    }
+   },
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 3,
+      "n": 500,
+      "rate": 0.006,
+      "ci95": [
+       0.0012,
+       0.0174
+      ]
+     },
+     "20": {
+      "rejected": 10,
+      "n": 500,
+      "rate": 0.02,
+      "ci95": [
+       0.0096,
+       0.0365
+      ]
+     },
+     "50": {
+      "rejected": 7,
+      "n": 500,
+      "rate": 0.014,
+      "ci95": [
+       0.0056,
+       0.0286
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "20": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "50": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     }
+    }
+   }
+  },
+  "sonnet-4-6/dense+rerank, random disjoint halves": {
+   "kind": "exact null by construction",
+   "corpus_digest": "31ecf4255fbc",
+   "retrievers": [
+    "dense+rerank"
+   ],
+   "pool": 99,
+   "full_pool": null,
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 17,
+      "n": 500,
+      "rate": 0.034,
+      "ci95": [
+       0.0199,
+       0.0539
+      ]
+     },
+     "20": {
+      "rejected": 25,
+      "n": 500,
+      "rate": 0.05,
+      "ci95": [
+       0.0326,
+       0.0729
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 25,
+      "n": 500,
+      "rate": 0.05,
+      "ci95": [
+       0.0326,
+       0.0729
+      ]
+     },
+     "10": {
+      "rejected": 14,
+      "n": 500,
+      "rate": 0.028,
+      "ci95": [
+       0.0154,
+       0.0465
+      ]
+     },
+     "20": {
+      "rejected": 28,
+      "n": 500,
+      "rate": 0.056,
+      "ci95": [
+       0.0375,
+       0.0799
+      ]
+     }
+    }
+   }
+  },
+  "nova-pro/dense+rerank, random disjoint halves": {
+   "kind": "exact null by construction",
+   "corpus_digest": "31ecf4255fbc",
+   "retrievers": [
+    "dense+rerank"
+   ],
+   "pool": 103,
+   "full_pool": null,
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 26,
+      "n": 500,
+      "rate": 0.052,
+      "ci95": [
+       0.0342,
+       0.0753
+      ]
+     },
+     "20": {
+      "rejected": 18,
+      "n": 500,
+      "rate": 0.036,
+      "ci95": [
+       0.0215,
+       0.0563
+      ]
+     },
+     "50": {
+      "rejected": 23,
+      "n": 500,
+      "rate": 0.046,
+      "ci95": [
+       0.0294,
+       0.0682
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 12,
+      "n": 500,
+      "rate": 0.024,
+      "ci95": [
+       0.0125,
+       0.0415
+      ]
+     },
+     "10": {
+      "rejected": 22,
+      "n": 500,
+      "rate": 0.044,
+      "ci95": [
+       0.0278,
+       0.0659
+      ]
+     },
+     "20": {
+      "rejected": 16,
+      "n": 500,
+      "rate": 0.032,
+      "ci95": [
+       0.0184,
+       0.0514
+      ]
+     },
+     "50": {
+      "rejected": 26,
+      "n": 500,
+      "rate": 0.052,
+      "ci95": [
+       0.0342,
+       0.0753
+      ]
+     }
+    }
+   }
+  },
+  "haiku-4-5/dense+rerank, random disjoint halves": {
+   "kind": "exact null by construction",
+   "corpus_digest": "178ba67368a0",
+   "retrievers": [
+    "dense+rerank"
+   ],
+   "pool": 110,
+   "full_pool": null,
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 26,
+      "n": 500,
+      "rate": 0.052,
+      "ci95": [
+       0.0342,
+       0.0753
+      ]
+     },
+     "20": {
+      "rejected": 25,
+      "n": 500,
+      "rate": 0.05,
+      "ci95": [
+       0.0326,
+       0.0729
+      ]
+     },
+     "50": {
+      "rejected": 20,
+      "n": 500,
+      "rate": 0.04,
+      "ci95": [
+       0.0246,
+       0.0611
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 24,
+      "n": 500,
+      "rate": 0.048,
+      "ci95": [
+       0.031,
+       0.0706
+      ]
+     },
+     "10": {
+      "rejected": 25,
+      "n": 500,
+      "rate": 0.05,
+      "ci95": [
+       0.0326,
+       0.0729
+      ]
+     },
+     "20": {
+      "rejected": 22,
+      "n": 500,
+      "rate": 0.044,
+      "ci95": [
+       0.0278,
+       0.0659
+      ]
+     },
+     "50": {
+      "rejected": 23,
+      "n": 500,
+      "rate": 0.046,
+      "ci95": [
+       0.0294,
+       0.0682
+      ]
+     }
+    }
+   }
+  },
+  "nova-lite/dense+rerank, random disjoint halves": {
+   "kind": "exact null by construction",
+   "corpus_digest": "178ba67368a0",
+   "retrievers": [
+    "dense+rerank"
+   ],
+   "pool": 105,
+   "full_pool": null,
+   "rejection_rate": {
+    "paired": {
+     "5": {
+      "rejected": 0,
+      "n": 500,
+      "rate": 0.0,
+      "ci95": [
+       0.0,
+       0.0074
+      ]
+     },
+     "10": {
+      "rejected": 30,
+      "n": 500,
+      "rate": 0.06,
+      "ci95": [
+       0.0408,
+       0.0845
+      ]
+     },
+     "20": {
+      "rejected": 22,
+      "n": 500,
+      "rate": 0.044,
+      "ci95": [
+       0.0278,
+       0.0659
+      ]
+     },
+     "50": {
+      "rejected": 22,
+      "n": 500,
+      "rate": 0.044,
+      "ci95": [
+       0.0278,
+       0.0659
+      ]
+     }
+    },
+    "unpaired": {
+     "5": {
+      "rejected": 30,
+      "n": 500,
+      "rate": 0.06,
+      "ci95": [
+       0.0408,
+       0.0845
+      ]
+     },
+     "10": {
+      "rejected": 31,
+      "n": 500,
+      "rate": 0.062,
+      "ci95": [
+       0.0425,
+       0.0869
+      ]
+     },
+     "20": {
+      "rejected": 27,
+      "n": 500,
+      "rate": 0.054,
+      "ci95": [
+       0.0359,
+       0.0776
+      ]
+     },
+     "50": {
+      "rejected": 20,
+      "n": 500,
+      "rate": 0.04,
+      "ci95": [
+       0.0246,
+       0.0611
+      ]
+     }
+    }
+   }
+  }
+ },
+ "seconds": 401.6
+}

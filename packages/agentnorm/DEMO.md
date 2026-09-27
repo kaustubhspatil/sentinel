@@ -173,6 +173,12 @@ functions are allowed and *reported*, so the optional-dependency set stays visib
 > is that all six static attack families scored 0% on a current frontier model, so there
 > were no successful attacks to detect. That is a real, dated finding about static
 > benchmarks, not a detection number.
+>
+> The more useful answer is the power table, because it is measured at the calibrated
+> budget and shows where detection stops. At a 1% budget, a single result a hundred times
+> its usual size is caught 69% of the time and one ten times its size 5%; under cold start,
+> bursts and extra calls are not caught at all. `detection_power` produces that table for
+> your own runs.
 
 **"Is the cold-start solution novel?"**
 > The technique is not — hierarchical profiling and population priors for cold start are
